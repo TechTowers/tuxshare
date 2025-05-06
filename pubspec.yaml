@@ -8,6 +8,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  ansix: ^0.3.4
   # path: ^1.8.0
 
 dev_dependencies:

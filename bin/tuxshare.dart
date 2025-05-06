@@ -1,3 +1,5 @@
+import 'package:tuxshare/shell.dart';
+
 void main(List<String> arguments) {
-  print('Hello world!');
+  shell();
 }
