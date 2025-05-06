@@ -60,16 +60,16 @@ void shell() {
     stdout.write('TuxShare> '.bold().yellow());
     String? input = stdin.readLineSync();
 
-    if (input == "") {
-      continue;
-    } else if (input == null) {
+    if (input == null) {
       print("");
       break;
     }
 
     String command = input.trim();
 
-    if (command == 'exit') {
+    if (command == "") {
+      continue;
+    } else if (command == 'exit') {
       break;
     } else if (command == 'help') {
       print(help());
