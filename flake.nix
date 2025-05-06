@@ -24,11 +24,11 @@
         inherit system;
         config.allowUnfree = true;
       };
-    in rec {
+    in {
       devenv-up = self.devShells.${system}.default.config.procfileScript;
       devenv-test = self.devShells.${system}.default.config.test;
       tuxshare = pkgs.callPackage ./nix/package.nix {};
-      default = tuxshare;
+      default = self.packages.${system}.tuxshare;
     });
 
     devShells =
@@ -49,6 +49,11 @@
 
               languages = {
                 dart.enable = true;
+              };
+
+              pre-commit.hooks = {
+                dart-analyze.enable = true;
+                dart-format.enable = true;
               };
 
               enterShell =
