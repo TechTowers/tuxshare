@@ -1,72 +1,44 @@
 {
   inputs = {
-    nixpkgs.url = "github:cachix/devenv-nixpkgs/rolling";
-    devenv.url = "github:cachix/devenv";
-    nixpkgs-python.url = "github:cachix/nixpkgs-python";
-  };
-
-  nixConfig = {
-    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
-    extra-substituters = "https://devenv.cachix.org";
+    nixpkgs.url = "nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default-linux";
+    git-hooks-nix = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
     self,
     nixpkgs,
-    devenv,
     systems,
     ...
   } @ inputs: let
-    forEachSystem = nixpkgs.lib.genAttrs (import systems);
-  in {
-    packages = forEachSystem (system: let
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
-    in {
-      devenv-up = self.devShells.${system}.default.config.procfileScript;
-      devenv-test = self.devShells.${system}.default.config.test;
-      tuxshare = pkgs.callPackage ./nix/package.nix {};
-      default = self.packages.${system}.tuxshare;
-    });
-
-    devShells =
-      forEachSystem
-      (system: let
-        pkgs = import nixpkgs {
+    inherit (nixpkgs) lib;
+    forEachSystem = f: lib.genAttrs (import systems) (system: f pkgsFor.${system});
+    pkgsFor = lib.genAttrs (import systems) (
+      system:
+        import nixpkgs {
           inherit system;
           config.allowUnfree = true;
-        };
-      in {
-        default = devenv.lib.mkShell {
-          inherit inputs pkgs;
-          modules = [
-            {
-              packages = with pkgs; [
-                git # duh
-              ];
+        }
+    );
+  in {
+    packages = forEachSystem (pkgs: {
+      tuxshare = pkgs.callPackage ./nix/package.nix {};
+      default = self.packages.${pkgs.system}.tuxshare;
+    });
 
-              languages = {
-                dart.enable = true;
-              };
+    devShells = forEachSystem (pkgs:
+      import ./nix/shell.nix {
+        inherit self;
+        inherit pkgs;
+      });
 
-              pre-commit.hooks = {
-                dart-analyze.enable = true;
-                dart-format.enable = true;
-              };
-
-              enterShell =
-                # bash
-                ''
-                  tput setaf 2; tput bold; echo "git version"; tput sgr0
-                  git --version
-                  tput setaf 2; tput bold; echo "flutter version"; tput sgr0
-                  dart --version
-                '';
-            }
-          ];
-        };
+    checks = forEachSystem (pkgs:
+      import ./nix/checks.nix {
+        inherit inputs;
+        inherit pkgs;
       });
   };
 }
