@@ -19,9 +19,16 @@
   } @ inputs: let
     forEachSystem = nixpkgs.lib.genAttrs (import systems);
   in {
-    packages = forEachSystem (system: {
+    packages = forEachSystem (system: let
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+    in rec {
       devenv-up = self.devShells.${system}.default.config.procfileScript;
       devenv-test = self.devShells.${system}.default.config.test;
+      tuxshare = pkgs.callPackage ./nix/package.nix {};
+      default = tuxshare;
     });
 
     devShells =
