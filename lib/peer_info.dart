@@ -11,6 +11,7 @@ import 'dart:io';
 class PeerInfo {
   /// Hostname of the peer
   final String hostname;
+
   /// IP address of the peer
   final InternetAddress address;
 
@@ -19,8 +20,8 @@ class PeerInfo {
   @override
   bool operator ==(Object other) =>
       other is PeerInfo &&
-          other.hostname == hostname &&
-          other.address == address;
+      other.hostname == hostname &&
+      other.address == address;
 
   @override
   int get hashCode => hostname.hashCode ^ address.hashCode;
