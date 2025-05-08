@@ -1,15 +1,8 @@
-/*
- * tuxshare_peer.dart
- * Store information about peers in the network.
- *
- * Author: Luka Pacar
- */
+import "dart:async";
+import "dart:convert";
+import "dart:io";
 
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:tuxshare/peer_info.dart';
+import "package:tuxshare/peer_info.dart";
 
 /// TuxSharePeer is a class that handles the discovery and data-handling of peers in the network
 class TuxSharePeer {
@@ -45,18 +38,25 @@ class TuxSharePeer {
     );
 
     _socket!
+      ..multicastLoopback = true
       ..joinMulticast(_multicastAddress)
-      ..listen(_onDatagram, onError: (e) => print('Socket-Error: $e'));
+      ..listen(_onDatagram, onError: (e) => print("Socket-Error: $e"));
   }
 
   /// Sends a discovery message to neighbors
-  Future<void> discover({
-    Duration timeout = const Duration(seconds: 15),
-  }) async {
+  Future<void> discover() async {
     _discoveredPeers.clear();
 
+    // Send the discovery ping
     _socket?.send(utf8.encode(_pingMessage), _multicastAddress, _multicastPort);
-    await Future.delayed(timeout);
+  }
+
+  Future<void> startDiscoveryLoop({
+    Duration interval = const Duration(seconds: 5),
+  }) async {
+    Timer.periodic(interval, (_) async {
+      discover();
+    });
   }
 
   void _onDatagram(RawSocketEvent event) {
@@ -69,29 +69,24 @@ class TuxSharePeer {
     if (msg == _pingMessage) {
       // Received a discovery message
       final payload = jsonEncode({
-        'msg': _responseMessage,
-        'hostname': _localHostname,
+        "msg": _responseMessage,
+        "hostname": _localHostname,
       });
       // Send a response to the sender with local info
       _socket!.send(utf8.encode(payload), dg.address, dg.port);
     } else {
-      // JSON-Antwort verarbeiten
       try {
         final map = jsonDecode(msg) as Map<String, dynamic>;
-        if (map['msg'] == _responseMessage) {
-          final peer = PeerInfo(map['hostname'] as String, dg.address);
+        if (map["msg"] == _responseMessage) {
+          final peer = PeerInfo(map["hostname"] as String, dg.address);
           _discoveredPeers.add(peer);
         }
-      } catch (_) {
-        /* Ignoriere ungültige Nachrichten */
-      }
+      } catch (_) {}
     }
   }
 
-  /// Socket schließen
   void close() => _socket?.close();
 
-  /// Getter für die Liste der Peers
   Set<PeerInfo> getPeers() {
     return _discoveredPeers;
   }
