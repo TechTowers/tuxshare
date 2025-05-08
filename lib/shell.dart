@@ -1,5 +1,10 @@
+import "dart:convert";
 import "dart:io";
+
 import "package:ansix/ansix.dart";
+import "package:tuxshare/tuxshare_peer.dart";
+
+final peer = TuxSharePeer(Platform.localHostname);
 
 String greeting() {
   return (StringBuffer()
@@ -30,7 +35,8 @@ String greeting() {
             ),
           ),
         )
-        ..write('\nType "help" for commands, "exit" to quit.\n'))
+        ..write('\nType "help" for commands, "exit" to quit.\n')
+        ..write("You are ${Platform.localHostname.yellow().bold()}"))
       .toString();
 }
 
@@ -62,29 +68,67 @@ String help() {
       .toString();
 }
 
-void shell() {
-  print(greeting());
+String list() {
+  List<List<String>> hosts = [
+    ["Host", "IP Address"],
+  ];
 
-  while (true) {
-    stdout.write("TuxShare> ".bold().yellow());
-    String? input = stdin.readLineSync();
-
-    if (input == null) {
-      print("");
-      break;
-    }
-
-    String command = input.trim();
-
-    if (command == "") {
-      continue;
-    } else if (command == "exit") {
-      break;
-    } else if (command == "help") {
-      print(help());
-    } else {
-      print('Unknown command: "$command"');
-    }
+  for (var p in peer.getPeers()) {
+    hosts.add([p.hostname, p.address.address]);
   }
-  print("Bye!".bold());
+
+  return (StringBuffer()..write(
+        AnsiGrid.fromRows(
+          hosts,
+          theme: AnsiGridTheme(
+            border: AnsiBorder(
+              type: AnsiBorderType.all,
+              style: AnsiBorderStyle.rounded,
+              color: AnsiColor.yellow,
+            ),
+            headerTextTheme: AnsiTextTheme(style: AnsiTextStyle(bold: true)),
+          ),
+        ),
+      ))
+      .toString();
+}
+
+Future<void> shell() async {
+  print(greeting());
+  await peer.startListening();
+  peer.startDiscoveryLoop();
+  await peer.discover();
+
+  final Stream<String> lines = stdin
+      .transform(utf8.decoder)
+      .transform(const LineSplitter());
+
+  stdout.write("TuxShare> ".bold().yellow());
+  await for (final String raw in lines) {
+    final String cmd = raw.trim();
+    if (cmd.isEmpty) {
+      stdout.write("TuxShare> ".bold().yellow());
+      continue;
+    }
+
+    switch (cmd) {
+      case "discover":
+        await peer.discover();
+        break;
+      case "list":
+        print(list());
+        break;
+      case "help":
+        print(help());
+        break;
+      case "exit":
+        peer.close();
+        print("Bye!".bold());
+        return;
+      default:
+        print('Unknown command: "$cmd"');
+    }
+
+    stdout.write("TuxShare> ".bold().yellow());
+  }
 }
