@@ -14,16 +14,16 @@ import 'package:tuxshare/peer_info.dart';
 /// TuxSharePeer is a class that handles the discovery and data-handling of peers in the network
 class TuxSharePeer {
   /// Multicast-Address that is used for discovery
-  final InternetAddress _multicastAddress;
+  final InternetAddress _multicastAddress = InternetAddress("224.0.0.1");
 
   /// Port that is used for discovery
-  final int _multicastPort;
+  final int _multicastPort = 6969;
 
   /// Message that is sent to discover peers
-  final String _pingMessage;
+  final String _pingMessage = "TS_DISCOVERY_PING";
 
   /// Message that is sent as a response to the discovery message
-  final String _responseMessage;
+  final String _responseMessage = "TS_DISCOVERY_PONG";
 
   /// Local hostname of the device
   late final String _localHostname;
@@ -34,13 +34,7 @@ class TuxSharePeer {
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
-  TuxSharePeer(
-    this._localHostname,
-    this._multicastAddress,
-    this._multicastPort,
-    this._pingMessage,
-    this._responseMessage,
-  );
+  TuxSharePeer(this._localHostname);
 
   /// Starts listening for incoming datagrams
   Future<void> startListening() async {
