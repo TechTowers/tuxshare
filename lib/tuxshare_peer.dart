@@ -24,6 +24,9 @@ class TuxSharePeer {
   /// Socket for sending and receiving datagrams
   RawDatagramSocket? _socket;
 
+  /// Timer for periodic discovery
+  Timer? _discoveryTimer;
+
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
@@ -54,7 +57,7 @@ class TuxSharePeer {
   Future<void> startDiscoveryLoop({
     Duration interval = const Duration(seconds: 5),
   }) async {
-    Timer.periodic(interval, (_) async {
+    _discoveryTimer = Timer.periodic(interval, (_) async {
       discover();
     });
   }
@@ -85,7 +88,10 @@ class TuxSharePeer {
     }
   }
 
-  void close() => _socket?.close();
+  void close() {
+    _discoveryTimer?.cancel();
+    _socket?.close();
+  }
 
   Set<PeerInfo> getPeers() {
     return _discoveredPeers;
