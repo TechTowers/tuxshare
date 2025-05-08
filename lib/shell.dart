@@ -40,7 +40,7 @@ String help() {
           <List<Object?>>[
             ["Command", "Description"],
             ["help", "displays this help message"],
-            ["scan", "manually scan for all devices on the network"],
+            ["discover", "manually discover for all devices on the network"],
             ["list", "show available devices"],
             ["send [device] [file/folder]", "send a file to a device duh"],
             ["requests", "list all requests you received"],
