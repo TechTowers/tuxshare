@@ -9,22 +9,10 @@ permissions:
   contents: write
 
 jobs:
-  release-linux:
-    name: Release pushed tag (Linux)
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Nix
-        uses: cachix/install-nix-action@v30
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compile binary
-        run: |
-          nix build
-      
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -35,16 +23,18 @@ jobs:
               --title="$tag" \
               --generate-notes
 
-      - name: Upload assets
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-        run: |
-          gh release upload "$tag" result/bin/* --repo="$GITHUB_REPOSITORY"
+  build-release:
+    runs-on: ${{ matrix.os }}
 
-  release-windows:
-    name:  Release pushed tag (Windows)
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            output-name: tuxshare-x86_64-linux
+          - os: windows-latest
+            output-name: tuxshare-x86_64-windows.exe
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -58,12 +48,11 @@ jobs:
 
       - name: Build
         run: |
-          dart compile exe bin/tuxshare.dart -o tuxshare.exe
+          mkdir build
+          dart compile exe bin/tuxshare.dart -v -o build/${{ matrix.output-name }}
 
       - name: Upload assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
         run: |
-          gh release upload "$env:tag" tuxshare.exe --repo="$GITHUB_REPOSITORY"
-
+          gh release upload "${{ github.ref_name }}" build/* --repo="$GITHUB_REPOSITORY"
