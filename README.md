@@ -24,7 +24,7 @@ Just run `tuxshare`, and you'll be ready to go.
 
 ## 📦 installation
 
-### binary
+### 📥 binaries
 
 > Soon™
 
