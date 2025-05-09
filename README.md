@@ -26,7 +26,13 @@ Just run `tuxshare`, and you'll be ready to go.
 
 ### 📥 binaries
 
-> Soon™
+Binaries are available under the
+[releases](https://github.com/TechTowers/tuxshare/releases) tab for Windows and
+Linux[^1] respectively.
+
+[^1]:
+    NixOS Users should probably just use the nix package as these binaries
+    only work for ~inferior~ normal distributions
 
 ### 🧰 self compiled
 
