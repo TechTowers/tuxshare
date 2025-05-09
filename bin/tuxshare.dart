@@ -1,5 +1,5 @@
 import 'package:tuxshare/shell.dart';
 
-void main(List<String> arguments) {
+Future<void> main() async {
   shell();
 }
