@@ -1,9 +1,8 @@
-name: Release
+name: Build
 
 on:
   push:
-    tags:
-      - v*
+  pull_request:
 
 permissions:
   contents: write
@@ -14,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create release
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
@@ -23,7 +23,7 @@ jobs:
               --title="$tag" \
               --generate-notes
 
-  build-release:
+  build:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -51,7 +51,15 @@ jobs:
           mkdir build
           dart compile exe bin/tuxshare.dart -v -o build/${{ matrix.output-name }}
 
+      - name: Upload workflow artifacts
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output-name }}
+          path: build/${{ matrix.output-name }}
+
       - name: Upload assets
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
