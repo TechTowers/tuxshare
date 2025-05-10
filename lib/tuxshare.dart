@@ -134,4 +134,29 @@ class TuxShare {
     _discoveryTimer?.cancel();
     _socket?.close();
   }
+
+  Future<void> sendFile({
+    required InternetAddress address,
+    required int port,
+    required String filePath,
+  }) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw FileSystemException("Datei existiert nicht", filePath);
+    }
+
+    Socket socket;
+    try {
+      socket = await Socket.connect(address, port);
+    } catch (e) {
+      throw SocketException("Verbindung zu $address:$port fehlgeschlagen: $e");
+    }
+
+    try {
+      await socket.addStream(file.openRead());
+      await socket.flush();
+    } finally {
+      await socket.close();
+    }
+  }
 }
