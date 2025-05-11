@@ -99,6 +99,12 @@ Future<void> shell() async {
   tuxshare.startDiscoveryLoop();
   await tuxshare.discover();
 
+  ProcessSignal.sigint.watch().listen((_) {
+    tuxshare.close();
+    print("\nReceived SIGINT (Ctrl+C). Bye!".bold());
+    exit(0);
+  });
+
   final commands = <String, Future<void> Function(List<String>)>{
     "help": (args) async => print(help()),
     "discover": (args) async => await tuxshare.discover(),
