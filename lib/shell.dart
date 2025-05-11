@@ -2,9 +2,9 @@ import "dart:convert";
 import "dart:io";
 
 import "package:ansix/ansix.dart";
-import "package:tuxshare/tuxshare_peer.dart";
+import "package:tuxshare/tuxshare.dart";
 
-final peer = TuxSharePeer(Platform.localHostname);
+final tuxshare = TuxShare(Platform.localHostname);
 
 String greeting() {
   return (StringBuffer()
@@ -73,7 +73,7 @@ String list() {
     ["Host", "IP Address"],
   ];
 
-  for (var p in peer.getPeers()) {
+  for (var p in tuxshare.getPeers()) {
     hosts.add([p.hostname, p.address.address]);
   }
 
@@ -95,9 +95,9 @@ String list() {
 
 Future<void> shell() async {
   print(greeting());
-  await peer.startListening();
-  peer.startDiscoveryLoop();
-  await peer.discover();
+  await tuxshare.startListening();
+  tuxshare.startDiscoveryLoop();
+  await tuxshare.discover();
 
   final Stream<String> lines = stdin
       .transform(utf8.decoder)
@@ -113,7 +113,7 @@ Future<void> shell() async {
 
     switch (cmd) {
       case "discover":
-        await peer.discover();
+        await tuxshare.discover();
         break;
       case "list":
         print(list());
@@ -122,7 +122,7 @@ Future<void> shell() async {
         print(help());
         break;
       case "exit":
-        peer.close();
+        tuxshare.close();
         print("Bye!".bold());
         return;
       default:

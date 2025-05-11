@@ -4,8 +4,8 @@ import "dart:io";
 
 import "package:tuxshare/peer_info.dart";
 
-/// TuxSharePeer is a class that handles the discovery and data-handling of peers in the network
-class TuxSharePeer {
+/// TuxShare is a class that handles the discovery and data-handling of peers in the network
+class TuxShare {
   /// Multicast-Address that is used for discovery
   final InternetAddress _multicastAddress;
 
@@ -30,7 +30,7 @@ class TuxSharePeer {
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
-  TuxSharePeer(
+  TuxShare(
     this._localHostname, {
     InternetAddress? multicastAddress,
     int multicastPort = 6969,
