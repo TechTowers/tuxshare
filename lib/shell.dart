@@ -99,34 +99,36 @@ Future<void> shell() async {
   tuxshare.startDiscoveryLoop();
   await tuxshare.discover();
 
+  final commands = <String, Future<void> Function(List<String>)>{
+    "help": (args) async => print(help()),
+    "discover": (args) async => await tuxshare.discover(),
+    "list": (args) async => print(list()),
+    "exit": (args) async {
+      tuxshare.close();
+      print("Bye!".bold());
+      exit(0); // Immediate shell exit
+    },
+  };
+
   final Stream<String> lines = stdin
       .transform(utf8.decoder)
       .transform(const LineSplitter());
 
   stdout.write("TuxShare> ".bold().yellow());
   await for (final String raw in lines) {
-    final String cmd = raw.trim();
-    if (cmd.isEmpty) {
-      stdout.write("TuxShare> ".bold().yellow());
-      continue;
-    }
+    final parts = raw.trim().split(RegExp(r'\s+'));
+    final command = parts[0];
+    final args = parts.sublist(1);
 
-    switch (cmd) {
-      case "discover":
-        await tuxshare.discover();
-        break;
-      case "list":
-        print(list());
-        break;
-      case "help":
-        print(help());
-        break;
-      case "exit":
-        tuxshare.close();
-        print("Bye!".bold());
-        return;
-      default:
-        print('Unknown command: "$cmd"');
+    final handler = commands[command];
+    if (handler != null) {
+      try {
+        await handler(args);
+      } catch (e) {
+        print("Error executing '$command': $e");
+      }
+    } else {
+      print('Unknown command: "$command"');
     }
 
     stdout.write("TuxShare> ".bold().yellow());
