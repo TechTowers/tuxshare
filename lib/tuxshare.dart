@@ -50,7 +50,7 @@ class TuxShare {
     );
 
     _socket!
-      ..multicastLoopback = true
+      ..multicastLoopback = false
       ..listen(_onDatagram, onError: (e) => print("Socket-Error: $e"));
 
     final interfaces = await NetworkInterface.list(
