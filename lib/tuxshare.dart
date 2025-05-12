@@ -77,7 +77,7 @@ class TuxShare {
     Duration interval = const Duration(seconds: 5),
   }) async {
     _discoveryTimer = Timer.periodic(interval, (_) async {
-      discover();
+      await discover();
     });
   }
 
