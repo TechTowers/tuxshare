@@ -51,8 +51,18 @@ class TuxShare {
 
     _socket!
       ..multicastLoopback = true
-      ..joinMulticast(_multicastAddress)
       ..listen(_onDatagram, onError: (e) => print("Socket-Error: $e"));
+
+    final interfaces = await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
+      includeLinkLocal: false,
+    );
+
+    for (final iface in interfaces) {
+      if (!iface.name.toLowerCase().contains("tailscale")) {
+        _socket!.joinMulticast(_multicastAddress, iface);
+      }
+    }
   }
 
   /// Sends a discovery message to neighbors
