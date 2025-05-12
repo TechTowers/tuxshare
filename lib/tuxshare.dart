@@ -67,7 +67,12 @@ class TuxShare {
 
   /// Sends a discovery message to neighbors
   Future<void> discover() async {
-    _discoveredPeers.clear();
+    for (var peer in _discoveredPeers) {
+      peer.addMissedPing();
+    }
+
+    // Remove expired peers
+    _discoveredPeers.removeWhere((p) => p.isExpired);
 
     // Send the discovery ping
     _socket?.send(utf8.encode(_pingMessage), _multicastAddress, _multicastPort);
@@ -101,7 +106,12 @@ class TuxShare {
         final map = jsonDecode(msg) as Map<String, dynamic>;
         if (map["msg"] == _responseMessage) {
           final peer = PeerInfo(map["hostname"] as String, dg.address);
-          _discoveredPeers.add(peer);
+          final existingPeer = _discoveredPeers.lookup(peer);
+          if (existingPeer != null) {
+            existingPeer.resetMissedPings(); // Renew TTL
+          } else {
+            _discoveredPeers.add(peer); // New peer
+          }
         }
       } catch (_) {}
     }

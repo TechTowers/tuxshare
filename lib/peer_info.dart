@@ -15,7 +15,14 @@ class PeerInfo {
   /// IP address of the peer
   final InternetAddress address;
 
-  const PeerInfo(this.hostname, this.address);
+  /// Count of missed pings
+  int _missedPings = 0;
+
+  static const int _maxMissedPings = 3;
+
+  PeerInfo(this.hostname, this.address);
+
+  bool get isExpired => _missedPings > _maxMissedPings;
 
   @override
   bool operator ==(Object other) =>
@@ -28,4 +35,12 @@ class PeerInfo {
 
   @override
   String toString() => '$hostname (${address.address})';
+
+  void addMissedPing() {
+    _missedPings++;
+  }
+
+  void resetMissedPings() {
+    _missedPings = 0;
+  }
 }
