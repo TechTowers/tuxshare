@@ -18,7 +18,7 @@ class PeerInfo {
   /// Count of missed pings
   int _missedPings = 0;
 
-  static const int _maxMissedPings = 3;
+  static const int _maxMissedPings = 2;
 
   PeerInfo(this.hostname, this.address);
 
