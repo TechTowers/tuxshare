@@ -5,6 +5,7 @@ import "package:ansix/ansix.dart";
 import "package:tuxshare/tuxshare.dart";
 
 final tuxshare = TuxShare(Platform.localHostname);
+void prompt() => stdout.write("TuxShare> ".bold().yellow());
 
 String greeting() {
   return (StringBuffer()
@@ -121,7 +122,7 @@ Future<void> shell() async {
       .transform(utf8.decoder)
       .transform(const LineSplitter());
 
-  stdout.write("TuxShare> ".bold().yellow());
+  prompt();
   await for (final String raw in lines) {
     final parts = raw.trim().split(RegExp(r'\s+'));
     final command = parts[0];
@@ -138,6 +139,6 @@ Future<void> shell() async {
       print('Unknown command: "$command"');
     }
 
-    stdout.write("TuxShare> ".bold().yellow());
+    prompt();
   }
 }
