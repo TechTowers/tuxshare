@@ -114,6 +114,7 @@ Future<void> shell() async {
       print("Bye!".bold());
       exit(0); // Immediate shell exit
     },
+    "": (args) async {},
   };
 
   final Stream<String> lines = stdin
