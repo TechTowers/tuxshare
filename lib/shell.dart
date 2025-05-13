@@ -74,7 +74,7 @@ String list() {
     ["Host", "IP Address"],
   ];
 
-  for (var p in tuxshare.getPeers()) {
+  for (var p in tuxshare.peers) {
     hosts.add([p.hostname, p.address.address]);
   }
 

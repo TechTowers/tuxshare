@@ -41,6 +41,8 @@ class TuxShare {
        _pingMessage = pingMessage,
        _responseMessage = responseMessage;
 
+  Set<PeerInfo> get peers => _discoveredPeers;
+
   /// Starts listening for incoming datagrams
   Future<void> startListening() async {
     // Starts listening for incoming datagrams
@@ -120,9 +122,5 @@ class TuxShare {
   void close() {
     _discoveryTimer?.cancel();
     _socket?.close();
-  }
-
-  Set<PeerInfo> getPeers() {
-    return _discoveredPeers;
   }
 }
