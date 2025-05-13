@@ -70,6 +70,10 @@ String help() {
 }
 
 String list() {
+  if (tuxshare.peers.isEmpty) {
+    return "No peers found 😥".bold();
+  }
+
   List<List<String>> hosts = [
     ["Host", "IP Address"],
   ];
