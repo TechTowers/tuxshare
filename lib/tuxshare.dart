@@ -135,28 +135,27 @@ class TuxShare {
     _socket?.close();
   }
 
-  /// sendet eine Datei per TCP an einen Ziel-Peer
-  Future<void> sendFile({
-    required InternetAddress address,
-    required int port,
-    required String filePath,
+  /// Send a file to Peer
+  Future<void> sendFile(
+    InternetAddress address,
+    String filePath, {
+    int port = 9696,
   }) async {
     final file = File(filePath);
     if (!await file.exists()) {
-      throw FileSystemException("Datei existiert nicht", filePath);
+      throw FileSystemException("File does not exist", filePath);
     }
 
-    // TCP-Verbindung aufbauen
     final socket = await Socket.connect(
       address,
       port,
-    ).catchError((e) => throw SocketException("Verbindung fehlgeschlagen: $e"));
+    ).catchError((e) => throw SocketException("Connection failed: $e"));
 
     try {
-      await socket.addStream(file.openRead()); // Datei-Stream senden
-      await socket.flush(); // Puffer leeren
+      await socket.addStream(file.openRead());
+      await socket.flush();
     } finally {
-      await socket.close(); // immer sauber schließen
+      await socket.close();
     }
   }
 }
