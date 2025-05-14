@@ -12,17 +12,31 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      tag: ${{ github.ref_name }}
+
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: build
+          merge-multiple: true
+
       - name: Create release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
         run: |
           gh release create "$tag" \
               --repo="$GITHUB_REPOSITORY" \
               --title="$tag" \
               --generate-notes
+
+      - name: Upload assets
+        run: |
+          gh release upload "$tag" build/*
 
   build:
     runs-on: ${{ matrix.os }}
@@ -53,15 +67,7 @@ jobs:
           dart compile exe bin/tuxshare.dart -v -o build/${{ matrix.output-name }}
 
       - name: Upload workflow artifacts
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.output-name }}
+          name: ${{matrix.output-name}}
           path: build/${{ matrix.output-name }}
-
-      - name: Upload assets
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${{ github.ref_name }}" build/* --repo="$GITHUB_REPOSITORY"
