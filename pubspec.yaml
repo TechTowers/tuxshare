@@ -1,6 +1,6 @@
 name: tuxshare
-description: A sample command-line application.
-version: 0.1.1
+description: TuxShare is an open-source, cross-platform file sharing app that lets you securely and effortlessly transfer files between devices on the same network—no internet required.
+version: 0.1.2
 repository: https://github.com/TechTowers/tuxshare
 
 environment:
