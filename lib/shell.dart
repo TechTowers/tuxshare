@@ -91,7 +91,11 @@ String list() {
               style: AnsiBorderStyle.rounded,
               color: AnsiColor.yellow,
             ),
-            headerTextTheme: AnsiTextTheme(style: AnsiTextStyle(bold: true)),
+            headerTextTheme: AnsiTextTheme(
+              style: AnsiTextStyle(bold: true),
+              padding: AnsiPadding.horizontal(1),
+            ),
+            cellTextTheme: AnsiTextTheme(padding: AnsiPadding.horizontal(1)),
           ),
         ),
       ))
