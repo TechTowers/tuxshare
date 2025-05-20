@@ -2,6 +2,7 @@ import "dart:convert";
 import "dart:io";
 
 import "package:ansix/ansix.dart";
+import "package:tuxshare/peer_info.dart";
 import "package:tuxshare/tuxshare.dart";
 
 final tuxshare = TuxShare(Platform.localHostname);
@@ -103,6 +104,12 @@ String list() {
 }
 
 Future<void> shell() async {
+  tuxshare.onPeerDiscovered = (PeerInfo peer) {
+    print(
+      "🔎 Discovered new peer: ${peer.hostname} (${peer.address.address})"
+          .green(),
+    );
+  };
   print(greeting());
   await tuxshare.startListening();
   tuxshare.startDiscoveryLoop();

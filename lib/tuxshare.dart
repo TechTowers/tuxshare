@@ -30,6 +30,9 @@ class TuxShare {
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
+  /// A optional callback function
+  void Function(PeerInfo peer)? onPeerDiscovered;
+
   TuxShare(
     this._localHostname, {
     InternetAddress? multicastAddress,
@@ -113,6 +116,7 @@ class TuxShare {
             existingPeer.resetMissedPings(); // Renew TTL
           } else {
             _discoveredPeers.add(peer); // New peer
+            onPeerDiscovered?.call(peer);
           }
         }
       } catch (_) {}
