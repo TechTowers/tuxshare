@@ -5,9 +5,11 @@ import "dart:isolate";
 import "package:ansix/ansix.dart";
 import "package:tuxshare/peer_info.dart";
 import "package:tuxshare/tuxshare_worker.dart";
+import "package:dart_console/dart_console.dart";
 
 final Set<PeerInfo> discoveredPeers = {}; // local peer cache
-void prompt() => stdout.write("TuxShare> ".bold().yellow());
+final console = Console();
+void prompt() => console.write("TuxShare> ".bold().yellow());
 
 String greeting() {
   return (StringBuffer()
@@ -109,7 +111,7 @@ Future<void> shell() async {
   await Isolate.spawn(backendMain, workerReceivePort.sendPort);
   late SendPort workerSendPort;
 
-  print(greeting());
+  console.writeLine(greeting());
 
   workerReceivePort.listen((message) {
     if (message is SendPort) {
@@ -119,30 +121,30 @@ Future<void> shell() async {
         case "peerDiscovered":
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.add(peer);
-          print("Discovered peer: $peer".blue());
+          console.writeLine("Discovered peer: $peer".blue());
         case "peerForget":
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.remove(peer);
-          print("Forgot peer: $peer".blue());
+          console.writeLine("Forgot peer: $peer".blue());
       }
     } else {
-      print(message);
+      console.writeErrorLine(message);
     }
   });
 
   ProcessSignal.sigint.watch().listen((_) {
     workerSendPort.send("exit");
-    print("\nReceived SIGINT (Ctrl+C). Bye!".bold());
+    console.writeLine("\nReceived SIGINT (Ctrl+C). Bye!".bold());
     exit(0);
   });
 
   final commands = <String, Future<void> Function(List<String>)>{
-    "help": (args) async => print(help()),
+    "help": (args) async => console.writeLine(help()),
     "discover": (args) async => workerSendPort.send("discover"),
-    "list": (args) async => print(list(discoveredPeers)),
+    "list": (args) async => console.writeLine(list(discoveredPeers)),
     "exit": (args) async {
       workerSendPort.send("exit");
-      print("Bye!".bold());
+      console.writeLine("Bye!".bold());
       exit(0); // Immediate shell exit
     },
     "": (args) async {},
@@ -163,10 +165,10 @@ Future<void> shell() async {
       try {
         await handler(args);
       } catch (e) {
-        print("Error executing '$command': $e");
+        console.writeErrorLine("Error executing '$command': $e");
       }
     } else {
-      print('Unknown command: "$command"');
+      console.writeErrorLine('Unknown command: "$command"');
     }
 
     prompt();

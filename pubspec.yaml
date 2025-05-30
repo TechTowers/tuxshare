@@ -9,6 +9,7 @@ environment:
 # Add regular dependencies here.
 dependencies:
   ansix: ^0.3.4
+  dart_console: ^4.1.1
   # path: ^1.8.0
 
 dev_dependencies:
