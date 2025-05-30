@@ -51,6 +51,7 @@ String help() {
           <List<Object?>>[
             ["Command", "Description"],
             ["help", "displays this help message"],
+            ["clear", "clear your screen"],
             ["discover", "manually discover for all devices on the network"],
             ["list", "show available devices"],
             ["send [device] [file/folder]", "send a file to a device duh"],
@@ -140,6 +141,7 @@ Future<void> shell() async {
 
   final commands = <String, Future<void> Function(List<String>)>{
     "help": (args) async => console.writeLine(help()),
+    "clear": (args) async => console.clearScreen(),
     "discover": (args) async => workerSendPort.send("discover"),
     "list": (args) async => console.writeLine(list(discoveredPeers)),
     "exit": (args) async {
