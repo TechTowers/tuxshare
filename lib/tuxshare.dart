@@ -30,8 +30,9 @@ class TuxShare {
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
-  /// A optional callback function
+  /// optional callback functions
   void Function(PeerInfo peer)? onPeerDiscovered;
+  void Function(PeerInfo peer)? onPeerForget;
 
   TuxShare(
     this._localHostname, {
@@ -77,7 +78,13 @@ class TuxShare {
     }
 
     // Remove expired peers
-    _discoveredPeers.removeWhere((p) => p.isExpired);
+    _discoveredPeers.removeWhere((p) {
+      if (p.isExpired) {
+        onPeerForget?.call(p);
+        return true;
+      }
+      return false;
+    });
 
     // Send the discovery ping
     _socket?.send(utf8.encode(_pingMessage), _multicastAddress, _multicastPort);

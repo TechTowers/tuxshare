@@ -1,11 +1,12 @@
 import "dart:convert";
 import "dart:io";
+import "dart:isolate";
 
 import "package:ansix/ansix.dart";
 import "package:tuxshare/peer_info.dart";
-import "package:tuxshare/tuxshare.dart";
+import "package:tuxshare/tuxshare_worker.dart";
 
-final tuxshare = TuxShare(Platform.localHostname);
+final Set<PeerInfo> discoveredPeers = {}; // local peer cache
 void prompt() => stdout.write("TuxShare> ".bold().yellow());
 
 String greeting() {
@@ -70,8 +71,8 @@ String help() {
       .toString();
 }
 
-String list() {
-  if (tuxshare.peers.isEmpty) {
+String list(Set<PeerInfo> peers) {
+  if (peers.isEmpty) {
     return "No peers found 😥".bold();
   }
 
@@ -79,7 +80,7 @@ String list() {
     ["Host", "IP Address"],
   ];
 
-  for (var p in tuxshare.peers) {
+  for (var p in peers) {
     hosts.add([p.hostname, p.address.address]);
   }
 
@@ -104,29 +105,43 @@ String list() {
 }
 
 Future<void> shell() async {
-  tuxshare.onPeerDiscovered = (PeerInfo peer) {
-    print(
-      "🔎 Discovered new peer: ${peer.hostname} (${peer.address.address})"
-          .green(),
-    );
-  };
+  final workerReceivePort = ReceivePort();
+  await Isolate.spawn(backendMain, workerReceivePort.sendPort);
+  late SendPort workerSendPort;
+
   print(greeting());
-  await tuxshare.startListening();
-  tuxshare.startDiscoveryLoop();
-  await tuxshare.discover();
+
+  workerReceivePort.listen((message) {
+    if (message is SendPort) {
+      workerSendPort = message;
+    } else if (message is Map<String, dynamic>) {
+      switch (message["type"]) {
+        case "peerDiscovered":
+          final peer = PeerInfo.fromJson(message['data']);
+          discoveredPeers.add(peer);
+          print("Discovered peer: $peer".blue());
+        case "peerForget":
+          final peer = PeerInfo.fromJson(message['data']);
+          discoveredPeers.remove(peer);
+          print("Forgot peer: $peer".blue());
+      }
+    } else {
+      print(message);
+    }
+  });
 
   ProcessSignal.sigint.watch().listen((_) {
-    tuxshare.close();
+    workerSendPort.send("exit");
     print("\nReceived SIGINT (Ctrl+C). Bye!".bold());
     exit(0);
   });
 
   final commands = <String, Future<void> Function(List<String>)>{
     "help": (args) async => print(help()),
-    "discover": (args) async => await tuxshare.discover(),
-    "list": (args) async => print(list()),
+    "discover": (args) async => workerSendPort.send("discover"),
+    "list": (args) async => print(list(discoveredPeers)),
     "exit": (args) async {
-      tuxshare.close();
+      workerSendPort.send("exit");
       print("Bye!".bold());
       exit(0); // Immediate shell exit
     },
