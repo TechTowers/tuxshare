@@ -30,6 +30,10 @@ class TuxShare {
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
+  /// optional callback functions
+  void Function(PeerInfo peer)? onPeerDiscovered;
+  void Function(PeerInfo peer)? onPeerForget;
+
   TuxShare(
     this._localHostname, {
     InternetAddress? multicastAddress,
@@ -74,7 +78,13 @@ class TuxShare {
     }
 
     // Remove expired peers
-    _discoveredPeers.removeWhere((p) => p.isExpired);
+    _discoveredPeers.removeWhere((p) {
+      if (p.isExpired) {
+        onPeerForget?.call(p);
+        return true;
+      }
+      return false;
+    });
 
     // Send the discovery ping
     _socket?.send(utf8.encode(_pingMessage), _multicastAddress, _multicastPort);
@@ -113,6 +123,7 @@ class TuxShare {
             existingPeer.resetMissedPings(); // Renew TTL
           } else {
             _discoveredPeers.add(peer); // New peer
+            onPeerDiscovered?.call(peer);
           }
         }
       } catch (_) {}

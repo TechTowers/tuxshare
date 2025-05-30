@@ -36,6 +36,16 @@ class PeerInfo {
   @override
   String toString() => '$hostname (${address.address})';
 
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'hostname': hostname,
+    'address': address.address,
+  };
+
+  static PeerInfo fromJson(Map<String, dynamic> json) => PeerInfo(
+    json['hostname'] as String,
+    InternetAddress(json['address'] as String),
+  );
+
   void addMissedPing() {
     _missedPings++;
   }
