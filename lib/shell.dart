@@ -123,10 +123,12 @@ Future<void> shell() async {
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.add(peer);
           console.writeLine("Discovered peer: $peer".blue());
+          prompt();
         case "peerForget":
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.remove(peer);
           console.writeLine("Forgot peer: $peer".blue());
+          prompt();
       }
     } else {
       console.writeErrorLine(message);
