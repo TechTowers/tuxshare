@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:isolate';
+import 'package:tuxshare/peer_info.dart';
 import 'package:tuxshare/tuxshare.dart';
 
 void backendMain(SendPort sendPort) async {
@@ -19,18 +20,23 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'peerForget', 'data': peer.toJson()});
   };
 
+  tuxshare.onSendOffer = (peer) {
+    sendPort.send({'type': 'sendOffer', 'data': peer.toJson()});
+  };
+
   await for (var msg in receivePort) {
-    if (msg is String && msg == "discover") {
-      await tuxshare.discover();
-    } else if (msg is List && msg[0] == "list") {
-      final replyPort = msg[1] as SendPort;
-      replyPort.send({
-        'type': 'peerList',
-        'data': tuxshare.peers.map((p) => p.toJson()).toList(),
-      });
-    } else if (msg == "exit") {
-      tuxshare.close();
-      break;
+    if (msg is Map<String, dynamic>) {
+      if (msg["type"] == "discover") {
+        await tuxshare.discover();
+      } else if (msg["type"] == "exit") {
+        tuxshare.close();
+        break;
+      } else if (msg["type"] == "send") {
+        tuxshare.sendFile(
+          PeerInfo.fromJson(msg["data"]["peer"]),
+          msg["data"]["file"],
+        );
+      }
     }
   }
 }

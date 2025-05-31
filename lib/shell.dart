@@ -129,6 +129,10 @@ Future<void> shell() async {
           discoveredPeers.remove(peer);
           console.writeLine("Forgot peer: $peer".blue());
           prompt();
+        case "sendOffer":
+          final peer = PeerInfo.fromJson(message['data']);
+          console.writeLine("Received a send request from $peer".blue());
+          prompt();
       }
     } else {
       console.writeErrorLine(message);
@@ -136,7 +140,7 @@ Future<void> shell() async {
   });
 
   ProcessSignal.sigint.watch().listen((_) {
-    workerSendPort.send("exit");
+    workerSendPort.send({"type": "exit"});
     console.writeLine("\nReceived SIGINT (Ctrl+C). Bye!".bold());
     exit(0);
   });
@@ -144,10 +148,38 @@ Future<void> shell() async {
   final commands = <String, Future<void> Function(List<String>)>{
     "help": (args) async => console.writeLine(help()),
     "clear": (args) async => console.clearScreen(),
-    "discover": (args) async => workerSendPort.send("discover"),
+    "discover": (args) async => workerSendPort.send({"type": "discover"}),
     "list": (args) async => console.writeLine(list(discoveredPeers)),
+    "send": (args) async {
+      if (args.length < 2) {
+        console.writeErrorLine('Usage: send [device] [file/folder]');
+        return;
+      }
+
+      final target = args[0];
+      final file = File(args.sublist(1).join(" "));
+      try {
+        await file.openRead().first;
+      } catch (e) {
+        throw FileSystemException(
+          "File is not readable or does not exist: ",
+          file.path,
+        );
+      }
+
+      final peer = discoveredPeers.firstWhere(
+        (p) => p.hostname == target || p.address.address == target,
+        orElse: () => throw ArgumentError('Peer "$target" not found.'),
+      );
+
+      console.writeLine('Sending "${file.path}" to $peer...');
+      workerSendPort.send({
+        "type": "send",
+        "data": {"peer": peer.toJson(), "file": file},
+      });
+    },
     "exit": (args) async {
-      workerSendPort.send("exit");
+      workerSendPort.send({"type": "exit"});
       console.writeLine("Bye!".bold());
       exit(0); // Immediate shell exit
     },

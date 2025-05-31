@@ -30,9 +30,17 @@ class TuxShare {
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
+  /// Map for sending
+  final Map<int, dynamic> _sendingTo = {};
+
+  /// Request thingies
+  int _requestCounter = 0;
+  final Map<int, dynamic> _requests = {};
+
   /// optional callback functions
   void Function(PeerInfo peer)? onPeerDiscovered;
   void Function(PeerInfo peer)? onPeerForget;
+  void Function(PeerInfo peer)? onSendOffer;
 
   TuxShare(
     this._localHostname, {
@@ -114,19 +122,21 @@ class TuxShare {
       // Send a response to the sender with local info
       _socket!.send(utf8.encode(payload), dg.address, dg.port);
     } else {
-      try {
-        final map = jsonDecode(msg) as Map<String, dynamic>;
-        if (map["msg"] == _responseMessage) {
-          final peer = PeerInfo(map["hostname"] as String, dg.address);
-          final existingPeer = _discoveredPeers.lookup(peer);
-          if (existingPeer != null) {
-            existingPeer.resetMissedPings(); // Renew TTL
-          } else {
-            _discoveredPeers.add(peer); // New peer
-            onPeerDiscovered?.call(peer);
-          }
+      final map = jsonDecode(msg) as Map<String, dynamic>;
+      if (map["msg"] == _responseMessage) {
+        final peer = PeerInfo(map["hostname"] as String, dg.address);
+        final existingPeer = _discoveredPeers.lookup(peer);
+        if (existingPeer != null) {
+          existingPeer.resetMissedPings(); // Renew TTL
+        } else {
+          _discoveredPeers.add(peer); // New peer
+          onPeerDiscovered?.call(peer);
         }
-      } catch (_) {}
+      } else if (map["msg"] == "sendOffer") {
+        _requests[_requestCounter] = map["data"];
+        onSendOffer?.call(PeerInfo.fromJson(map["data"]["peer"]));
+        _requestCounter++;
+      }
     }
   }
 
@@ -136,26 +146,38 @@ class TuxShare {
   }
 
   /// Send a file to Peer
-  Future<void> sendFile(
-    InternetAddress address,
-    String filePath, {
-    int port = 9696,
-  }) async {
-    final file = File(filePath);
-    if (!await file.exists()) {
-      throw FileSystemException("File does not exist", filePath);
-    }
+  Future<void> sendFile(PeerInfo peer, File file, {int port = 9696}) async {
+    int hash = Object.hash(_localHostname, file.path);
+    _sendingTo[hash] = {
+      "peer": peer,
+      "file": file.path,
+      "size": await file.length(),
+    };
 
-    final socket = await Socket.connect(
-      address,
-      port,
-    ).catchError((e) => throw SocketException("Connection failed: $e"));
+    _socket?.send(
+      utf8.encode(
+        jsonEncode({
+          "msg": "sendOffer",
+          "data": {
+            ..._sendingTo[hash],
+            ...{"hash": hash},
+          },
+        }),
+      ),
+      peer.address,
+      _multicastPort,
+    );
 
-    try {
-      await socket.addStream(file.openRead());
-      await socket.flush();
-    } finally {
-      await socket.close();
-    }
+    // final socket = await Socket.connect(
+    //   peer.address,
+    //   port,
+    // ).catchError((e) => throw SocketException("Connection failed: $e"));
+
+    // try {
+    //   await socket.addStream(file.openRead());
+    //   await socket.flush();
+    // } finally {
+    //   await socket.close();
+    // }
   }
 }
