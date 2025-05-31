@@ -20,8 +20,8 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'peerForget', 'data': peer.toJson()});
   };
 
-  tuxshare.onSendOffer = (peer) {
-    sendPort.send({'type': 'sendOffer', 'data': peer.toJson()});
+  tuxshare.onRequest = (request) {
+    sendPort.send({'type': 'request', 'data': request});
   };
 
   await for (var msg in receivePort) {

@@ -8,6 +8,7 @@ import "package:tuxshare/tuxshare_worker.dart";
 import "package:dart_console/dart_console.dart";
 
 final Set<PeerInfo> discoveredPeers = {}; // local peer cache
+final Map<int, dynamic> receivedRequests = {}; // local request cache
 final console = Console();
 void prompt() => console.write("TuxShare> ".bold().yellow());
 
@@ -107,6 +108,48 @@ String list(Set<PeerInfo> peers) {
       .toString();
 }
 
+String requests() {
+  if (receivedRequests.isEmpty) {
+    return "No requests yet 😥".bold();
+  }
+  console.writeLine(receivedRequests);
+
+  List<List<String>> rows = [
+    ["ID", "Peer", "File", "Size", "Hash"],
+  ];
+
+  for (var requestID in receivedRequests.keys) {
+    final request = receivedRequests[requestID];
+    rows.add([
+      requestID.toString(),
+      PeerInfo.fromJson(request["peer"]).toString(),
+      request["file"].split("/").last,
+      request["size"].toString(),
+      request["hash"].toString(),
+    ]);
+  }
+
+  return (StringBuffer()..write(
+        AnsiGrid.fromRows(
+          rows,
+          theme: AnsiGridTheme(
+            border: AnsiBorder(
+              type: AnsiBorderType.all,
+              style: AnsiBorderStyle.rounded,
+              color: AnsiColor.yellow,
+            ),
+            keepSameWidth: false,
+            headerTextTheme: AnsiTextTheme(
+              style: AnsiTextStyle(bold: true),
+              padding: AnsiPadding.horizontal(1),
+            ),
+            cellTextTheme: AnsiTextTheme(padding: AnsiPadding.horizontal(1)),
+          ),
+        ),
+      ))
+      .toString();
+}
+
 Future<void> shell() async {
   final workerReceivePort = ReceivePort();
   await Isolate.spawn(backendMain, workerReceivePort.sendPort);
@@ -129,8 +172,11 @@ Future<void> shell() async {
           discoveredPeers.remove(peer);
           console.writeLine("Forgot peer: $peer".blue());
           prompt();
-        case "sendOffer":
-          final peer = PeerInfo.fromJson(message['data']);
+        case "request":
+          final requestID = message["data"].keys.first;
+          final request = message["data"][requestID];
+          final peer = PeerInfo.fromJson(request["peer"]);
+          receivedRequests.addAll(message["data"]);
           console.writeLine("Received a send request from $peer".blue());
           prompt();
       }
@@ -178,6 +224,7 @@ Future<void> shell() async {
         "data": {"peer": peer.toJson(), "file": file},
       });
     },
+    "requests": (args) async => console.writeLine(requests()),
     "exit": (args) async {
       workerSendPort.send({"type": "exit"});
       console.writeLine("Bye!".bold());

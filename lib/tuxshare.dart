@@ -40,7 +40,7 @@ class TuxShare {
   /// optional callback functions
   void Function(PeerInfo peer)? onPeerDiscovered;
   void Function(PeerInfo peer)? onPeerForget;
-  void Function(PeerInfo peer)? onSendOffer;
+  void Function(Map<int, dynamic>)? onRequest;
 
   TuxShare(
     this._localHostname, {
@@ -134,7 +134,7 @@ class TuxShare {
         }
       } else if (map["msg"] == "sendOffer") {
         _requests[_requestCounter] = map["data"];
-        onSendOffer?.call(PeerInfo.fromJson(map["data"]["peer"]));
+        onRequest?.call({_requestCounter: map["data"]});
         _requestCounter++;
       }
     }
@@ -152,6 +152,7 @@ class TuxShare {
       "peer": peer,
       "file": file.path,
       "size": await file.length(),
+      "hash": hash,
     };
 
     _socket?.send(
