@@ -9,6 +9,7 @@ void backendMain(SendPort sendPort) async {
   final tuxshare = TuxShare(Platform.localHostname);
   await tuxshare.startListening();
   tuxshare.startDiscoveryLoop();
+  tuxshare.discover();
 
   tuxshare.onPeerDiscovered = (peer) {
     sendPort.send({'type': 'peerDiscovered', 'data': peer.toJson()});
