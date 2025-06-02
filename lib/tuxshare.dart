@@ -51,7 +51,7 @@ class TuxShare {
 
   /// optional callback functions
   void Function(PeerInfo peer)? onPeerDiscovered;
-  void Function(PeerInfo peer)? onPeerForget;
+  void Function(PeerInfo peer)? onPeerDisappear;
   void Function(Map<String, dynamic>)? onOfferFail;
   void Function(Map<int, dynamic>)? onRequest;
   void Function(Map<String, dynamic>)? onOfferReject;
@@ -119,7 +119,7 @@ class TuxShare {
     // Remove expired peers
     for (final peer in List.from(_discoveredPeers.where((p) => p.isExpired))) {
       _discoveredPeers.remove(peer);
-      onPeerForget?.call(peer);
+      onPeerDisappear?.call(peer);
       _requests.removeWhere((key, value) => value["peer"] == peer);
       _sendingTo.removeWhere((key, value) => value["peer"] == peer);
     }

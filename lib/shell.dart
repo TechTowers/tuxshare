@@ -167,11 +167,11 @@ Future<void> shell() async {
           discoveredPeers.add(peer);
           print("Discovered peer: $peer".blue());
           prompt();
-        case "peerForget":
+        case "peerDisappear":
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.remove(peer);
           receivedRequests.removeWhere((key, value) => value["peer"] == peer);
-          print("Forgot peer: $peer".blue());
+          print("Peer disappeared: $peer".blue());
           prompt();
         case "sendOfferFail":
           final request = {

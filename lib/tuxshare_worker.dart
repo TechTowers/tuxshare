@@ -17,8 +17,8 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'peerDiscovered', 'data': peer.toJson()});
   };
 
-  tuxshare.onPeerForget = (peer) {
-    sendPort.send({'type': 'peerForget', 'data': peer.toJson()});
+  tuxshare.onPeerDisappear = (peer) {
+    sendPort.send({'type': 'peerDisappear', 'data': peer.toJson()});
   };
 
   tuxshare.onOfferFail = (request) {
