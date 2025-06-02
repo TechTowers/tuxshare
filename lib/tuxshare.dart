@@ -42,7 +42,7 @@ class TuxShare {
   void Function(PeerInfo peer)? onPeerDiscovered;
   void Function(PeerInfo peer)? onPeerForget;
   void Function(Map<int, dynamic>)? onRequest;
-  void Function(Map<int, dynamic>)? onRequestDecline;
+  void Function(Map<String, dynamic>)? onRequestDecline;
 
   TuxShare(
     this._localHostname, {
@@ -146,7 +146,7 @@ class TuxShare {
         // TODO
       } else if (map["msg"] == "TS_DECLINE_OFFER") {
         final request = _sendingTo.remove(map["data"]["hash"]);
-        onPeerDiscovered?.call(request);
+        onRequestDecline?.call(request);
       }
     }
   }

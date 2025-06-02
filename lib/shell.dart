@@ -185,7 +185,7 @@ Future<void> shell() async {
           prompt();
         case "decline":
           final request = message["data"];
-          final peer = PeerInfo.fromJson(request["peer"]);
+          final peer = request["peer"];
           console.writeLine("Request from $peer was declined.".red());
           prompt();
       }
