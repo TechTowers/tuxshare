@@ -52,7 +52,7 @@ class TuxShare {
   /// optional callback functions
   void Function(PeerInfo peer)? onPeerDiscovered;
   void Function(PeerInfo peer)? onPeerForget;
-  void Function(Map<String, dynamic>)? onSendOfferFail;
+  void Function(Map<String, dynamic>)? onOfferFail;
   void Function(Map<int, dynamic>)? onRequest;
   void Function(Map<String, dynamic>)? onOfferReject;
   void Function(String)? onFileReceived;
@@ -179,7 +179,7 @@ class TuxShare {
           _socket!.send(utf8.encode(payload), dg.address, dg.port);
         }
       } else if (map["msg"] == _offerFailMessage) {
-        onSendOfferFail?.call(_sendingTo[map["data"]]);
+        onOfferFail?.call(_sendingTo[map["data"]]);
       } else if (map["msg"] == _offerAcceptMessage) {
         final request = _sendingTo.remove(map["data"]["hash"]);
         sendFile(request["peer"], File(request["file"]));
