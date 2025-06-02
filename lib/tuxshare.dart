@@ -132,7 +132,7 @@ class TuxShare {
           _discoveredPeers.add(peer); // New peer
           onPeerDiscovered?.call(peer);
         }
-      } else if (map["msg"] == "sendOffer") {
+      } else if (map["msg"] == "TS_SEND_OFFER") {
         _requests[_requestCounter] = map["data"];
         onRequest?.call({_requestCounter: map["data"]});
         _requestCounter++;
@@ -158,7 +158,7 @@ class TuxShare {
     _socket?.send(
       utf8.encode(
         jsonEncode({
-          "msg": "sendOffer",
+          "msg": "TS_SEND_OFFER",
           "data": {
             ..._sendingTo[hash],
             ...{"hash": hash},
