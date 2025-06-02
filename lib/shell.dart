@@ -269,22 +269,31 @@ Future<void> shell() async {
         return;
       }
 
-      final requestID = int.parse(args[0]);
-      String destination = "";
-      if (args.length > 1) {
-        destination = args.sublist(1).join(" ");
+      final requestID = int.tryParse(args[0]);
+      if (requestID == null) {
+        console.writeErrorLine('Invalid request ID: ${args[0]}'.red());
+        return;
       }
+
       if (!receivedRequests.containsKey(requestID)) {
         console.writeErrorLine('Request ID $requestID not found.');
         return;
       }
 
+      String? outputPath;
+      if (args.length > 1) {
+        outputPath = args.sublist(1).join(" ");
+      } else {
+        outputPath = null;
+      }
+
       workerSendPort.send({
         "type": "accept",
         "data": {
+          "requestID": requestID,
           "hash": receivedRequests[requestID]["hash"],
           "peer": receivedRequests[requestID]["peer"].toJson(),
-          "destination": destination,
+          "outputPath": outputPath,
         },
       });
       receivedRequests.remove(requestID);

@@ -200,25 +200,6 @@ class TuxShare {
     );
   }
 
-  /// Send a file to Peer
-  Future<void> acceptFile(
-    int fileHash,
-    PeerInfo peer,
-    String destinationFilePath,
-  ) async {
-    _socket?.send(
-      utf8.encode(
-        jsonEncode({
-          "msg": "TS_ACCEPT_OFFER",
-          "data": {"peer": _localHostname, "hash": fileHash},
-        }),
-      ),
-      peer.address,
-      _multicastPort,
-    );
-    receiveFile(destinationFilePath); // Open Port and receive file
-  }
-
   /// Send a file to a peer
   Future<void> sendFile(
     PeerInfo destinationPeer,
@@ -244,26 +225,112 @@ class TuxShare {
     }
   }
 
+  String getDefaultDownloadsPath() {
+    if (Platform.isWindows) {
+      final userProfile = Platform.environment['USERPROFILE'];
+      if (userProfile != null) {
+        return '$userProfile\\Downloads';
+      }
+    } else {
+      final home = Platform.environment['HOME'];
+      if (home != null) {
+        return '$home/Downloads';
+      }
+    }
+
+    // Fallback to current directory if all else fails
+    return Directory.current.path;
+  }
+
+  String expandHome(String path) {
+    if (path.startsWith('~')) {
+      final home =
+          Platform.isWindows
+              ? Platform.environment['USERPROFILE']
+              : Platform.environment['HOME'];
+      if (home != null) {
+        return path.replaceFirst('~', home);
+      }
+    }
+    return path;
+  }
+
+  String resolveDestinationPath(String outputPath, String originalFilename) {
+    String input = outputPath.trim();
+    if (input.endsWith(Platform.pathSeparator)) {
+      input = input.substring(0, input.length - 1);
+    }
+
+    final expanded = expandHome(input);
+    final fileOrDir = File(expanded);
+    final dir = Directory(expanded);
+
+    if (input.isEmpty) {
+      return '${getDefaultDownloadsPath()}${Platform.pathSeparator}$originalFilename';
+    }
+
+    if (dir.existsSync()) {
+      return '${dir.path}${Platform.pathSeparator}$originalFilename';
+    } else if (fileOrDir.parent.existsSync()) {
+      return fileOrDir.path;
+    } else {
+      return '${getDefaultDownloadsPath()}${Platform.pathSeparator}$input';
+    }
+  }
+
+  /// Send a file to Peer
+  Future<void> acceptFile(
+    int requestID,
+    int fileHash,
+    PeerInfo peer,
+    String? outputPath, // Raw user input
+  ) async {
+    // Extract original filename from request info
+    final request = _requests[requestID];
+    final originalFilename = File(request["file"]).uri.pathSegments.last;
+
+    // Resolve destination file path
+    final resolvedPath = resolveDestinationPath(
+      outputPath ?? "",
+      originalFilename,
+    );
+
+    // Notify peer of acceptance
+    _socket?.send(
+      utf8.encode(
+        jsonEncode({
+          "msg": "TS_ACCEPT_OFFER",
+          "data": {"peer": _localHostname, "hash": fileHash},
+        }),
+      ),
+      peer.address,
+      _multicastPort,
+    );
+
+    // Begin receiving the file
+    receiveFile(File(resolvedPath));
+  }
+
   /// Receive a file from a Peer
-  Future<void> receiveFile(String savePath, {int port = 9696}) async {
+  Future<void> receiveFile(File outputPath, {int port = 9696}) async {
     final server = await ServerSocket.bind(InternetAddress.anyIPv4, port);
 
     await for (Socket socket in server) {
-      final file = File(savePath);
+      final file = (outputPath);
       final sink = file.openWrite();
 
       try {
         await for (final data in socket) {
           sink.add(data);
         }
-
         await sink.close();
-        onFileReceived?.call(savePath);
+        onFileReceived?.call(outputPath.path);
         await socket.close();
+        break;
       } catch (e) {
         await sink.close();
         await socket.close();
-        onReceivingFileError?.call(savePath, e);
+        onReceivingFileError?.call(outputPath.path, e);
       }
     }
   }

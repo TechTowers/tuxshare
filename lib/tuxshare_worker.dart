@@ -70,9 +70,10 @@ void backendMain(SendPort sendPort) async {
         );
       } else if (msg["type"] == "accept") {
         tuxshare.acceptFile(
+          msg["data"]["requestID"],
           msg["data"]["hash"],
           PeerInfo.fromJson(msg["data"]["peer"]),
-          msg["data"]["destination"],
+          msg["data"]["outputPath"],
         );
       } else if (msg["type"] == "decline") {
         tuxshare.declineFile(
