@@ -16,12 +16,6 @@ fast, simple, and always ready 🐧✨.
   network stack
 - **Offers a clean terminal UI** with cool ANSI visuals
 
-## ️🖥️ usage
-
-Just run `tuxshare`, and you'll be ready to go.
-
-- Use `help` to see all available commands 🙂
-
 ## 📦 installation
 
 ### 📥 binaries
@@ -46,6 +40,18 @@ cd tuxshare
 dart pub get
 dart compile exe bin/tuxshare.dart
 ```
+
+## ️🖥️ usage
+
+> [!IMPORTANT]
+> Make sure to open these ports (and ofc don't have anything running on them):
+>
+> - 6969 (UDP)
+> - 9696 (TCP)
+
+Just run `tuxshare`, and you'll be ready to go.
+
+- Use `help` to see all available commands 🙂
 
 ### ❄️ nix (with flakes)
 
