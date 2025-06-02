@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:isolate';
+
 import 'package:tuxshare/peer_info.dart';
 import 'package:tuxshare/tuxshare.dart';
 
@@ -24,6 +25,10 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'request', 'data': request});
   };
 
+  tuxshare.onRequestDecline = (request) {
+    sendPort.send({'type': 'decline', 'data': request});
+  };
+
   await for (var msg in receivePort) {
     if (msg is Map<String, dynamic>) {
       if (msg["type"] == "discover") {
@@ -41,6 +46,11 @@ void backendMain(SendPort sendPort) async {
           msg["data"]["hash"],
           PeerInfo.fromJson(msg["data"]["peer"]),
           msg["data"]["destination"],
+        );
+      } else if (msg["type"] == "decline") {
+        tuxshare.declineFile(
+          msg["data"]["hash"],
+          PeerInfo.fromJson(msg["data"]["peer"]),
         );
       }
     }

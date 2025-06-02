@@ -183,6 +183,11 @@ Future<void> shell() async {
           receivedRequests.addAll(data);
           console.writeLine("Received a send request from $peer".blue());
           prompt();
+        case "decline":
+          final request = message["data"];
+          final peer = PeerInfo.fromJson(request["peer"]);
+          console.writeLine("Request from $peer was declined.".red());
+          prompt();
       }
     } else {
       console.writeErrorLine(message);
@@ -244,15 +249,35 @@ Future<void> shell() async {
         return;
       }
 
-
-
       workerSendPort.send({
         "type": "accept",
         "data": {
           "hash": receivedRequests[requestID]["hash"],
           "peer": receivedRequests[requestID]["peer"].toJson(),
           "destination": args.length == 2 ? args[1] : "",
-        }
+        },
+      });
+      receivedRequests.remove(requestID);
+    },
+    "decline": (args) async {
+      if (args.length != 1) {
+        console.writeErrorLine('Usage: decline [request id]');
+        return;
+      }
+
+      final requestID = int.parse(args[0]);
+
+      if (!receivedRequests.containsKey(requestID)) {
+        console.writeErrorLine('Request ID $requestID not found.');
+        return;
+      }
+
+      workerSendPort.send({
+        "type": "decline",
+        "data": {
+          "hash": receivedRequests[requestID]["hash"],
+          "peer": receivedRequests[requestID]["peer"].toJson(),
+        },
       });
       receivedRequests.remove(requestID);
     },

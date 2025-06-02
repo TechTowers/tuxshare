@@ -42,6 +42,7 @@ class TuxShare {
   void Function(PeerInfo peer)? onPeerDiscovered;
   void Function(PeerInfo peer)? onPeerForget;
   void Function(Map<int, dynamic>)? onRequest;
+  void Function(Map<int, dynamic>)? onRequestDecline;
 
   TuxShare(
     this._localHostname, {
@@ -143,6 +144,9 @@ class TuxShare {
         _requestCounter++;
       } else if (map["msg"] == "TS_ACCEPT_OFFER") {
         // TODO
+      } else if (map["msg"] == "TS_DECLINE_OFFER") {
+        final request = _sendingTo.remove(map["data"]["hash"]);
+        onPeerDiscovered?.call(request);
       }
     }
   }
@@ -156,7 +160,7 @@ class TuxShare {
   Future<void> sendFile(PeerInfo peer, File file, {int port = 9696}) async {
     int hash = Object.hash(peer.hostname, file.path);
     _sendingTo[hash] = {
-      "peer": peer.hostname,
+      "peer": peer,
       "file": file.path,
       "size": await file.length(),
       "hash": hash,
@@ -195,12 +199,24 @@ class TuxShare {
     PeerInfo peer,
     String destinationFilePath,
   ) async {
-    print("cock");
     _socket?.send(
       utf8.encode(
         jsonEncode({
           "msg": "TS_ACCEPT_OFFER",
           "data": {"peer": _localHostname, "hash": fileHash},
+        }),
+      ),
+      peer.address,
+      _multicastPort,
+    );
+  }
+
+  Future<void> declineFile(int fileHash, PeerInfo peer) async {
+    _socket?.send(
+      utf8.encode(
+        jsonEncode({
+          "msg": "TS_DECLINE_OFFER",
+          "data": {"hash": fileHash},
         }),
       ),
       peer.address,
