@@ -80,6 +80,8 @@ class TuxShare {
 
   Set<PeerInfo> get peers => _discoveredPeers;
 
+  Map<int, dynamic> get requests => _requests;
+
   PeerInfo getPeerFromHostname(String hostname) {
     return _discoveredPeers.firstWhere((peer) => peer.hostname == hostname);
   }
@@ -115,13 +117,10 @@ class TuxShare {
     }
 
     // Remove expired peers
-    _discoveredPeers.removeWhere((p) {
-      if (p.isExpired) {
-        onPeerForget?.call(p);
-        return true;
-      }
-      return false;
-    });
+    for (final peer in List.from(_discoveredPeers.where((p) => p.isExpired))) {
+      _discoveredPeers.remove(peer);
+      onPeerForget?.call(peer);
+    }
 
     // Send the discovery ping
     _socket?.send(utf8.encode(_pingMessage), _multicastAddress, _multicastPort);
@@ -328,7 +327,8 @@ class TuxShare {
     );
 
     // Begin receiving the file
-    receiveFile(File(resolvedPath));
+    await receiveFile(File(resolvedPath));
+    _requests.remove(requestID);
   }
 
   /// Receive a file from a Peer
@@ -355,16 +355,17 @@ class TuxShare {
     }
   }
 
-  Future<void> rejectFile(int fileHash, PeerInfo peer) async {
+  Future<void> rejectFile(int requestID, int hash, PeerInfo peer) async {
     _socket?.send(
       utf8.encode(
         jsonEncode({
           "msg": _offerRejectMessage,
-          "data": {"hash": fileHash},
+          "data": {"hash": hash},
         }),
       ),
       peer.address,
       _multicastPort,
     );
+    _requests.remove(requestID);
   }
 }

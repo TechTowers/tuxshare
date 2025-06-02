@@ -77,6 +77,7 @@ void backendMain(SendPort sendPort) async {
         );
       } else if (msg["type"] == "reject") {
         tuxshare.rejectFile(
+          msg["data"]["requestID"],
           msg["data"]["hash"],
           PeerInfo.fromJson(msg["data"]["peer"]),
         );
