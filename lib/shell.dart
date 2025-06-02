@@ -188,6 +188,23 @@ Future<void> shell() async {
           final peer = request["peer"];
           console.writeLine("Request from $peer was declined.".red());
           prompt();
+        case "fileReceived":
+          final filePath = message['data'];
+          console.writeLine("File received: $filePath".green());
+          prompt();
+        case "sendingFileError":
+          final peer = PeerInfo.fromJson(message['data']['peer']);
+          final error = message['data']['error'];
+          final file = message['data']['file'];
+          console.writeErrorLine(
+            "Error sending file $file to $peer: $error".red(),
+          );
+          prompt();
+        case "receivingFileError":
+          final file = message['data']['file'];
+          final error = message['data']['error'];
+          console.writeErrorLine("Error receiving file $file: $error".red());
+          prompt();
       }
     } else {
       console.writeErrorLine(message);

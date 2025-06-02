@@ -43,6 +43,9 @@ class TuxShare {
   void Function(PeerInfo peer)? onPeerForget;
   void Function(Map<int, dynamic>)? onRequest;
   void Function(Map<String, dynamic>)? onRequestDecline;
+  void Function(String)? onFileReceived;
+  void Function(PeerInfo, String, Object)? onSendingFileError;
+  void Function(String, Object)? onReceivingFileError;
 
   TuxShare(
     this._localHostname, {
@@ -143,7 +146,8 @@ class TuxShare {
         onRequest?.call({_requestCounter: map["data"]});
         _requestCounter++;
       } else if (map["msg"] == "TS_ACCEPT_OFFER") {
-        // TODO
+        final request = _sendingTo.remove(map["data"]["hash"]);
+        sendFile(request["peer"], File(request["file"]));
       } else if (map["msg"] == "TS_DECLINE_OFFER") {
         final request = _sendingTo.remove(map["data"]["hash"]);
         onRequestDecline?.call(request);
@@ -179,18 +183,6 @@ class TuxShare {
       peer.address,
       _multicastPort,
     );
-
-    // final socket = await Socket.connect(
-    //   peer.address,
-    //   port,
-    // ).catchError((e) => throw SocketException("Connection failed: $e"));
-
-    // try {
-    //   await socket.addStream(file.openRead());
-    //   await socket.flush();
-    // } finally {
-    //   await socket.close();
-    // }
   }
 
   /// Send a file to Peer
@@ -209,6 +201,56 @@ class TuxShare {
       peer.address,
       _multicastPort,
     );
+    receiveFile(destinationFilePath); // Open Port and receive file
+  }
+
+  /// Send a file to a peer
+  Future<void> sendFile(
+    PeerInfo destinationPeer,
+    File file, {
+    int port = 9696,
+  }) async {
+    late Socket socket;
+    try {
+      socket = await Socket.connect(
+        destinationPeer.address,
+        port,
+      ).catchError((e) => throw e);
+    } catch (e) {
+      onSendingFileError?.call(destinationPeer, file.path, e);
+      return;
+    }
+
+    try {
+      await socket.addStream(file.openRead());
+      await socket.flush();
+    } finally {
+      await socket.close();
+    }
+  }
+
+  /// Receive a file from a Peer
+  Future<void> receiveFile(String savePath, {int port = 9696}) async {
+    final server = await ServerSocket.bind(InternetAddress.anyIPv4, port);
+
+    await for (Socket socket in server) {
+      final file = File(savePath);
+      final sink = file.openWrite();
+
+      try {
+        await for (final data in socket) {
+          sink.add(data);
+        }
+
+        await sink.close();
+        onFileReceived?.call(savePath);
+        await socket.close();
+      } catch (e) {
+        await sink.close();
+        await socket.close();
+        onReceivingFileError?.call(savePath, e);
+      }
+    }
   }
 
   Future<void> declineFile(int fileHash, PeerInfo peer) async {

@@ -29,6 +29,29 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'decline', 'data': request});
   };
 
+  tuxshare.onFileReceived = (filePath) {
+    sendPort.send({'type': 'fileReceived', 'data': filePath});
+  };
+
+  tuxshare.onSendingFileError = (peer, file, error) {
+    sendPort.send({
+      'type': 'sendingFileError',
+      'data': {'peer': peer.toJson(), 'file': file, 'error': error.toString()},
+    });
+  };
+
+  tuxshare.onReceivingFileError = (file, error) {
+    sendPort.send({
+      'type': 'receivingFileError',
+      'data': {'file': file, 'error': error.toString()},
+    });
+  };
+
+
+  void Function(String)? onFileReceived;
+  void Function(PeerInfo, String)? onSendingFileError;
+  void Function(String)? onReceivingFileError;
+
   await for (var msg in receivePort) {
     if (msg is Map<String, dynamic>) {
       if (msg["type"] == "discover") {
