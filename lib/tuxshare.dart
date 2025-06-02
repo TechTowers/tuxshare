@@ -3,7 +3,6 @@ import "dart:convert";
 import "dart:io";
 
 import "package:tuxshare/peer_info.dart";
-import "package:tuxshare/shell.dart";
 
 /// TuxShare is a class that handles the discovery and data-handling of peers in the network
 class TuxShare {
@@ -41,6 +40,7 @@ class TuxShare {
   /// optional callback functions
   void Function(PeerInfo peer)? onPeerDiscovered;
   void Function(PeerInfo peer)? onPeerForget;
+  void Function(Map<String, dynamic>)? onSendOfferFail;
   void Function(Map<int, dynamic>)? onRequest;
   void Function(Map<String, dynamic>)? onRequestDecline;
   void Function(String)? onFileReceived;
@@ -61,7 +61,7 @@ class TuxShare {
   Set<PeerInfo> get peers => _discoveredPeers;
 
   PeerInfo getPeerFromHostname(String hostname) {
-    return discoveredPeers.firstWhere((peer) => peer.hostname == hostname);
+    return _discoveredPeers.firstWhere((peer) => peer.hostname == hostname);
   }
 
   /// Starts listening for incoming datagrams
@@ -142,9 +142,24 @@ class TuxShare {
           onPeerDiscovered?.call(peer);
         }
       } else if (map["msg"] == "TS_SEND_OFFER") {
-        _requests[_requestCounter] = map["data"];
-        onRequest?.call({_requestCounter: map["data"]});
-        _requestCounter++;
+        try {
+          final data = {
+            ...map["data"],
+            "peer": getPeerFromHostname(map["data"]["peer"]),
+          };
+
+          _requests[_requestCounter] = data;
+          onRequest?.call({_requestCounter: map["data"]});
+          _requestCounter++;
+        } on StateError catch (_) {
+          final payload = jsonEncode({
+            "msg": "TS_SEND_OFFER_FAIL",
+            "data": map["data"]["hash"],
+          });
+          _socket!.send(utf8.encode(payload), dg.address, dg.port);
+        }
+      } else if (map["msg"] == "TS_SEND_OFFER_FAIL") {
+        onSendOfferFail?.call(_sendingTo[map["data"]]);
       } else if (map["msg"] == "TS_ACCEPT_OFFER") {
         final request = _sendingTo.remove(map["data"]["hash"]);
         sendFile(request["peer"], File(request["file"]));

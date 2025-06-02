@@ -21,6 +21,15 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'peerForget', 'data': peer.toJson()});
   };
 
+  tuxshare.onSendOfferFail = (request) {
+    final serializedRequest = {
+      ...request,
+      "peer": request["peer"].toJson(), // manually serialize PeerInfo
+    };
+
+    sendPort.send({"type": "sendOfferFail", "data": serializedRequest});
+  };
+
   tuxshare.onRequest = (request) {
     sendPort.send({'type': 'request', 'data': request});
   };

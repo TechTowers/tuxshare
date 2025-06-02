@@ -172,6 +172,16 @@ Future<void> shell() async {
           discoveredPeers.remove(peer);
           console.writeLine("Forgot peer: $peer".blue());
           prompt();
+        case "sendOfferFail":
+          final request = {
+            ...message["data"],
+            "peer": PeerInfo.fromJson(message["data"]["peer"]),
+          };
+          console.writeErrorLine(
+            "Sending offer to ${request["peer"]} for ${request["file"]} failed! Try again in a few seconds."
+                .red(),
+          );
+          prompt();
         case "request":
           final requestID = message["data"].keys.first;
           final request = message["data"][requestID];
