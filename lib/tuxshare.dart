@@ -147,9 +147,9 @@ class TuxShare {
 
   /// Send a file to Peer
   Future<void> sendFile(PeerInfo peer, File file, {int port = 9696}) async {
-    int hash = Object.hash(_localHostname, file.path);
+    int hash = Object.hash(peer.hostname, file.path);
     _sendingTo[hash] = {
-      "peer": peer,
+      "peer": peer.hostname,
       "file": file.path,
       "size": await file.length(),
       "hash": hash,
@@ -161,7 +161,7 @@ class TuxShare {
           "msg": "TS_SEND_OFFER",
           "data": {
             ..._sendingTo[hash],
-            ...{"hash": hash},
+            ...{"peer": _localHostname},
           },
         }),
       ),

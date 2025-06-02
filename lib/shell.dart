@@ -112,7 +112,6 @@ String requests() {
   if (receivedRequests.isEmpty) {
     return "No requests yet 😥".bold();
   }
-  console.writeLine(receivedRequests);
 
   List<List<String>> rows = [
     ["ID", "Peer", "File", "Size", "Hash"],
@@ -122,7 +121,7 @@ String requests() {
     final request = receivedRequests[requestID];
     rows.add([
       requestID.toString(),
-      PeerInfo.fromJson(request["peer"]).toString(),
+      request["peer"].toString(),
       request["file"].split("/").last,
       request["size"].toString(),
       request["hash"].toString(),
@@ -175,8 +174,10 @@ Future<void> shell() async {
         case "request":
           final requestID = message["data"].keys.first;
           final request = message["data"][requestID];
-          final peer = PeerInfo.fromJson(request["peer"]);
-          receivedRequests.addAll(message["data"]);
+          final peer = discoveredPeers.firstWhere((p) => p.hostname == request["peer"]);
+          final data = message["data"];
+          data[requestID]["peer"] = peer;
+          receivedRequests.addAll(data);
           console.writeLine("Received a send request from $peer".blue());
           prompt();
       }
