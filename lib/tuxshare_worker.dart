@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:isolate';
+
+import 'package:tuxshare/peer_info.dart';
 import 'package:tuxshare/tuxshare.dart';
 
 void backendMain(SendPort sendPort) async {
@@ -19,18 +21,56 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'peerForget', 'data': peer.toJson()});
   };
 
+  tuxshare.onRequest = (request) {
+    sendPort.send({'type': 'request', 'data': request});
+  };
+
+  tuxshare.onRequestDecline = (request) {
+    sendPort.send({'type': 'decline', 'data': request});
+  };
+
+  tuxshare.onFileReceived = (filePath) {
+    sendPort.send({'type': 'fileReceived', 'data': filePath});
+  };
+
+  tuxshare.onSendingFileError = (peer, file, error) {
+    sendPort.send({
+      'type': 'sendingFileError',
+      'data': {'peer': peer.toJson(), 'file': file, 'error': error.toString()},
+    });
+  };
+
+  tuxshare.onReceivingFileError = (file, error) {
+    sendPort.send({
+      'type': 'receivingFileError',
+      'data': {'file': file, 'error': error.toString()},
+    });
+  };
+
   await for (var msg in receivePort) {
-    if (msg is String && msg == "discover") {
-      await tuxshare.discover();
-    } else if (msg is List && msg[0] == "list") {
-      final replyPort = msg[1] as SendPort;
-      replyPort.send({
-        'type': 'peerList',
-        'data': tuxshare.peers.map((p) => p.toJson()).toList(),
-      });
-    } else if (msg == "exit") {
-      tuxshare.close();
-      break;
+    if (msg is Map<String, dynamic>) {
+      if (msg["type"] == "discover") {
+        await tuxshare.discover();
+      } else if (msg["type"] == "exit") {
+        tuxshare.close();
+        break;
+      } else if (msg["type"] == "send") {
+        tuxshare.sendOffer(
+          PeerInfo.fromJson(msg["data"]["peer"]),
+          msg["data"]["file"],
+        );
+      } else if (msg["type"] == "accept") {
+        tuxshare.acceptFile(
+          msg["data"]["hash"],
+          PeerInfo.fromJson(msg["data"]["peer"]),
+          msg["data"]["destination"],
+        );
+      } else if (msg["type"] == "decline") {
+        tuxshare.declineFile(
+          msg["data"]["hash"],
+          PeerInfo.fromJson(msg["data"]["peer"]),
+        );
+      }
     }
   }
 }

@@ -3,12 +3,14 @@ import "dart:io";
 import "dart:isolate";
 
 import "package:ansix/ansix.dart";
+import "package:dart_console/dart_console.dart";
 import "package:tuxshare/peer_info.dart";
 import "package:tuxshare/tuxshare_worker.dart";
-import "package:dart_console/dart_console.dart";
 
 final Set<PeerInfo> discoveredPeers = {}; // local peer cache
+final Map<int, dynamic> receivedRequests = {}; // local request cache
 final console = Console();
+
 void prompt() => console.write("TuxShare> ".bold().yellow());
 
 String greeting() {
@@ -107,6 +109,47 @@ String list(Set<PeerInfo> peers) {
       .toString();
 }
 
+String requests() {
+  if (receivedRequests.isEmpty) {
+    return "No requests yet 😥".bold();
+  }
+
+  List<List<String>> rows = [
+    ["ID", "Peer", "File", "Size", "Hash"],
+  ];
+
+  for (var requestID in receivedRequests.keys) {
+    final request = receivedRequests[requestID];
+    rows.add([
+      requestID.toString(),
+      request["peer"].toString(),
+      request["file"].split(RegExp(r'[\\/]')).last,
+      request["size"].toString(),
+      request["hash"].toString(),
+    ]);
+  }
+
+  return (StringBuffer()..write(
+        AnsiGrid.fromRows(
+          rows,
+          theme: AnsiGridTheme(
+            border: AnsiBorder(
+              type: AnsiBorderType.all,
+              style: AnsiBorderStyle.rounded,
+              color: AnsiColor.yellow,
+            ),
+            keepSameWidth: false,
+            headerTextTheme: AnsiTextTheme(
+              style: AnsiTextStyle(bold: true),
+              padding: AnsiPadding.horizontal(1),
+            ),
+            cellTextTheme: AnsiTextTheme(padding: AnsiPadding.horizontal(1)),
+          ),
+        ),
+      ))
+      .toString();
+}
+
 Future<void> shell() async {
   final workerReceivePort = ReceivePort();
   await Isolate.spawn(backendMain, workerReceivePort.sendPort);
@@ -129,6 +172,39 @@ Future<void> shell() async {
           discoveredPeers.remove(peer);
           console.writeLine("Forgot peer: $peer".blue());
           prompt();
+        case "request":
+          final requestID = message["data"].keys.first;
+          final request = message["data"][requestID];
+          final peer = discoveredPeers.firstWhere(
+            (p) => p.hostname == request["peer"],
+          );
+          final data = message["data"];
+          data[requestID]["peer"] = peer;
+          receivedRequests.addAll(data);
+          console.writeLine("Received a send request from $peer".blue());
+          prompt();
+        case "decline":
+          final request = message["data"];
+          final peer = request["peer"];
+          console.writeLine("Request from $peer was declined.".red());
+          prompt();
+        case "fileReceived":
+          final filePath = message['data'];
+          console.writeLine("File received: $filePath".green());
+          prompt();
+        case "sendingFileError":
+          final peer = PeerInfo.fromJson(message['data']['peer']);
+          final error = message['data']['error'];
+          final file = message['data']['file'];
+          console.writeErrorLine(
+            "Error sending file $file to $peer: $error".red(),
+          );
+          prompt();
+        case "receivingFileError":
+          final file = message['data']['file'];
+          final error = message['data']['error'];
+          console.writeErrorLine("Error receiving file $file: $error".red());
+          prompt();
       }
     } else {
       console.writeErrorLine(message);
@@ -136,7 +212,7 @@ Future<void> shell() async {
   });
 
   ProcessSignal.sigint.watch().listen((_) {
-    workerSendPort.send("exit");
+    workerSendPort.send({"type": "exit"});
     console.writeLine("\nReceived SIGINT (Ctrl+C). Bye!".bold());
     exit(0);
   });
@@ -144,10 +220,89 @@ Future<void> shell() async {
   final commands = <String, Future<void> Function(List<String>)>{
     "help": (args) async => console.writeLine(help()),
     "clear": (args) async => console.clearScreen(),
-    "discover": (args) async => workerSendPort.send("discover"),
+    "discover": (args) async => workerSendPort.send({"type": "discover"}),
     "list": (args) async => console.writeLine(list(discoveredPeers)),
+    "send": (args) async {
+      if (args.length < 2) {
+        console.writeErrorLine('Usage: send [device] [file/folder]');
+        return;
+      }
+
+      final target = args[0];
+      final file = File(args.sublist(1).join(" "));
+      try {
+        await file.openRead().first;
+      } catch (e) {
+        throw FileSystemException(
+          "File is not readable or does not exist: ",
+          file.path,
+        );
+      }
+
+      final peer = discoveredPeers.firstWhere(
+        (p) => p.hostname == target || p.address.address == target,
+        orElse: () => throw ArgumentError('Peer "$target" not found.'),
+      );
+
+      console.writeLine('Sending "${file.path}" to $peer...');
+      workerSendPort.send({
+        "type": "send",
+        "data": {"peer": peer.toJson(), "file": file},
+      });
+    },
+    "requests": (args) async => console.writeLine(requests()),
+    "accept": (args) async {
+      if (args.isEmpty) {
+        console.writeErrorLine(
+          'Usage: accept [request id]... <destination path>',
+        );
+        return;
+      }
+
+      final requestID = int.parse(args[0]);
+      String destination = "";
+      if (args.length > 1) {
+        destination = args.sublist(1).join(" ");
+      }
+      if (!receivedRequests.containsKey(requestID)) {
+        console.writeErrorLine('Request ID $requestID not found.');
+        return;
+      }
+
+      workerSendPort.send({
+        "type": "accept",
+        "data": {
+          "hash": receivedRequests[requestID]["hash"],
+          "peer": receivedRequests[requestID]["peer"].toJson(),
+          "destination": destination,
+        },
+      });
+      receivedRequests.remove(requestID);
+    },
+    "decline": (args) async {
+      if (args.length != 1) {
+        console.writeErrorLine('Usage: decline [request id]');
+        return;
+      }
+
+      final requestID = int.parse(args[0]);
+
+      if (!receivedRequests.containsKey(requestID)) {
+        console.writeErrorLine('Request ID $requestID not found.');
+        return;
+      }
+
+      workerSendPort.send({
+        "type": "decline",
+        "data": {
+          "hash": receivedRequests[requestID]["hash"],
+          "peer": receivedRequests[requestID]["peer"].toJson(),
+        },
+      });
+      receivedRequests.remove(requestID);
+    },
     "exit": (args) async {
-      workerSendPort.send("exit");
+      workerSendPort.send({"type": "exit"});
       console.writeLine("Bye!".bold());
       exit(0); // Immediate shell exit
     },

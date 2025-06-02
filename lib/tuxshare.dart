@@ -3,6 +3,7 @@ import "dart:convert";
 import "dart:io";
 
 import "package:tuxshare/peer_info.dart";
+import "package:tuxshare/shell.dart";
 
 /// TuxShare is a class that handles the discovery and data-handling of peers in the network
 class TuxShare {
@@ -30,9 +31,21 @@ class TuxShare {
   /// Set of discovered peers
   final Set<PeerInfo> _discoveredPeers = {};
 
+  /// Map for sending
+  final Map<int, dynamic> _sendingTo = {};
+
+  /// Request thingies
+  int _requestCounter = 0;
+  final Map<int, dynamic> _requests = {};
+
   /// optional callback functions
   void Function(PeerInfo peer)? onPeerDiscovered;
   void Function(PeerInfo peer)? onPeerForget;
+  void Function(Map<int, dynamic>)? onRequest;
+  void Function(Map<String, dynamic>)? onRequestDecline;
+  void Function(String)? onFileReceived;
+  void Function(PeerInfo, String, Object)? onSendingFileError;
+  void Function(String, Object)? onReceivingFileError;
 
   TuxShare(
     this._localHostname, {
@@ -46,6 +59,10 @@ class TuxShare {
        _responseMessage = responseMessage;
 
   Set<PeerInfo> get peers => _discoveredPeers;
+
+  PeerInfo getPeerFromHostname(String hostname) {
+    return discoveredPeers.firstWhere((peer) => peer.hostname == hostname);
+  }
 
   /// Starts listening for incoming datagrams
   Future<void> startListening() async {
@@ -114,24 +131,138 @@ class TuxShare {
       // Send a response to the sender with local info
       _socket!.send(utf8.encode(payload), dg.address, dg.port);
     } else {
-      try {
-        final map = jsonDecode(msg) as Map<String, dynamic>;
-        if (map["msg"] == _responseMessage) {
-          final peer = PeerInfo(map["hostname"] as String, dg.address);
-          final existingPeer = _discoveredPeers.lookup(peer);
-          if (existingPeer != null) {
-            existingPeer.resetMissedPings(); // Renew TTL
-          } else {
-            _discoveredPeers.add(peer); // New peer
-            onPeerDiscovered?.call(peer);
-          }
+      final map = jsonDecode(msg) as Map<String, dynamic>;
+      if (map["msg"] == _responseMessage) {
+        final peer = PeerInfo(map["hostname"] as String, dg.address);
+        final existingPeer = _discoveredPeers.lookup(peer);
+        if (existingPeer != null) {
+          existingPeer.resetMissedPings(); // Renew TTL
+        } else {
+          _discoveredPeers.add(peer); // New peer
+          onPeerDiscovered?.call(peer);
         }
-      } catch (_) {}
+      } else if (map["msg"] == "TS_SEND_OFFER") {
+        _requests[_requestCounter] = map["data"];
+        onRequest?.call({_requestCounter: map["data"]});
+        _requestCounter++;
+      } else if (map["msg"] == "TS_ACCEPT_OFFER") {
+        final request = _sendingTo.remove(map["data"]["hash"]);
+        sendFile(request["peer"], File(request["file"]));
+      } else if (map["msg"] == "TS_DECLINE_OFFER") {
+        final request = _sendingTo.remove(map["data"]["hash"]);
+        onRequestDecline?.call(request);
+      }
     }
   }
 
   void close() {
     _discoveryTimer?.cancel();
     _socket?.close();
+  }
+
+  /// Send a file to Peer
+  Future<void> sendOffer(PeerInfo peer, File file, {int port = 9696}) async {
+    int hash = Object.hash(peer.hostname, file.path);
+    _sendingTo[hash] = {
+      "peer": peer,
+      "file": file.path,
+      "size": await file.length(),
+      "hash": hash,
+    };
+
+    _socket?.send(
+      utf8.encode(
+        jsonEncode({
+          "msg": "TS_SEND_OFFER",
+          "data": {
+            ..._sendingTo[hash],
+            ...{"peer": _localHostname},
+          },
+        }),
+      ),
+      peer.address,
+      _multicastPort,
+    );
+  }
+
+  /// Send a file to Peer
+  Future<void> acceptFile(
+    int fileHash,
+    PeerInfo peer,
+    String destinationFilePath,
+  ) async {
+    _socket?.send(
+      utf8.encode(
+        jsonEncode({
+          "msg": "TS_ACCEPT_OFFER",
+          "data": {"peer": _localHostname, "hash": fileHash},
+        }),
+      ),
+      peer.address,
+      _multicastPort,
+    );
+    receiveFile(destinationFilePath); // Open Port and receive file
+  }
+
+  /// Send a file to a peer
+  Future<void> sendFile(
+    PeerInfo destinationPeer,
+    File file, {
+    int port = 9696,
+  }) async {
+    late Socket socket;
+    try {
+      socket = await Socket.connect(
+        destinationPeer.address,
+        port,
+      ).catchError((e) => throw e);
+    } catch (e) {
+      onSendingFileError?.call(destinationPeer, file.path, e);
+      return;
+    }
+
+    try {
+      await socket.addStream(file.openRead());
+      await socket.flush();
+    } finally {
+      await socket.close();
+    }
+  }
+
+  /// Receive a file from a Peer
+  Future<void> receiveFile(String savePath, {int port = 9696}) async {
+    final server = await ServerSocket.bind(InternetAddress.anyIPv4, port);
+
+    await for (Socket socket in server) {
+      final file = File(savePath);
+      final sink = file.openWrite();
+
+      try {
+        await for (final data in socket) {
+          sink.add(data);
+        }
+
+        await sink.close();
+        onFileReceived?.call(savePath);
+        await socket.close();
+      } catch (e) {
+        await sink.close();
+        await socket.close();
+        onReceivingFileError?.call(savePath, e);
+      }
+    }
+  }
+
+  Future<void> declineFile(int fileHash, PeerInfo peer) async {
+    _socket?.send(
+      utf8.encode(
+        jsonEncode({
+          "msg": "TS_DECLINE_OFFER",
+          "data": {"hash": fileHash},
+        }),
+      ),
+      peer.address,
+      _multicastPort,
+    );
   }
 }
