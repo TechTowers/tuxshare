@@ -120,6 +120,8 @@ class TuxShare {
     for (final peer in List.from(_discoveredPeers.where((p) => p.isExpired))) {
       _discoveredPeers.remove(peer);
       onPeerForget?.call(peer);
+      _requests.removeWhere((key, value) => value["peer"] == peer);
+      _sendingTo.removeWhere((key, value) => value["peer"] == peer);
     }
 
     // Send the discovery ping

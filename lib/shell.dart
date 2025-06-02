@@ -170,6 +170,7 @@ Future<void> shell() async {
         case "peerForget":
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.remove(peer);
+          receivedRequests.removeWhere((key, value) => value["peer"] == peer);
           print("Forgot peer: $peer".blue());
           prompt();
         case "sendOfferFail":
