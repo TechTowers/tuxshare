@@ -47,11 +47,6 @@ void backendMain(SendPort sendPort) async {
     });
   };
 
-
-  void Function(String)? onFileReceived;
-  void Function(PeerInfo, String)? onSendingFileError;
-  void Function(String)? onReceivingFileError;
-
   await for (var msg in receivePort) {
     if (msg is Map<String, dynamic>) {
       if (msg["type"] == "discover") {
