@@ -34,8 +34,8 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'request', 'data': request});
   };
 
-  tuxshare.onRequestDecline = (request) {
-    sendPort.send({'type': 'decline', 'data': request});
+  tuxshare.onRequestReject = (request) {
+    sendPort.send({'type': 'reject', 'data': request});
   };
 
   tuxshare.onFileReceived = (filePath) {
@@ -75,8 +75,8 @@ void backendMain(SendPort sendPort) async {
           PeerInfo.fromJson(msg["data"]["peer"]),
           msg["data"]["outputPath"],
         );
-      } else if (msg["type"] == "decline") {
-        tuxshare.declineFile(
+      } else if (msg["type"] == "reject") {
+        tuxshare.rejectFile(
           msg["data"]["hash"],
           PeerInfo.fromJson(msg["data"]["peer"]),
         );

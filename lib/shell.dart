@@ -193,10 +193,10 @@ Future<void> shell() async {
           receivedRequests.addAll(data);
           print("Received a send request from $peer".blue());
           prompt();
-        case "decline":
+        case "reject":
           final request = message["data"];
           final peer = request["peer"];
-          print("Request from $peer was declined.".red());
+          print('Request to send to $peer was rejected.'.red());
           prompt();
         case "fileReceived":
           final filePath = message['data'];
@@ -294,13 +294,17 @@ Future<void> shell() async {
       });
       receivedRequests.remove(requestID);
     },
-    "decline": (args) async {
-      if (args.length != 1) {
-        print('Usage: decline [request id]'.red());
+    "reject": (args) async {
+      if (args.isEmpty) {
+        print('Usage: reject [request id|all]'.red());
         return;
       }
 
-      final requestID = int.parse(args[0]);
+      final requestID = int.tryParse(args[0]);
+      if (requestID == null) {
+        print('Invalid request ID: ${args[0]}'.red());
+        return;
+      }
 
       if (!receivedRequests.containsKey(requestID)) {
         print('Request ID $requestID not found.'.red());
@@ -308,7 +312,7 @@ Future<void> shell() async {
       }
 
       workerSendPort.send({
-        "type": "decline",
+        "type": "reject",
         "data": {
           "hash": receivedRequests[requestID]["hash"],
           "peer": receivedRequests[requestID]["peer"].toJson(),

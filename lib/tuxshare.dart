@@ -42,7 +42,7 @@ class TuxShare {
   void Function(PeerInfo peer)? onPeerForget;
   void Function(Map<String, dynamic>)? onSendOfferFail;
   void Function(Map<int, dynamic>)? onRequest;
-  void Function(Map<String, dynamic>)? onRequestDecline;
+  void Function(Map<String, dynamic>)? onRequestReject;
   void Function(String)? onFileReceived;
   void Function(PeerInfo, String, Object)? onSendingFileError;
   void Function(String, Object)? onReceivingFileError;
@@ -163,9 +163,9 @@ class TuxShare {
       } else if (map["msg"] == "TS_ACCEPT_OFFER") {
         final request = _sendingTo.remove(map["data"]["hash"]);
         sendFile(request["peer"], File(request["file"]));
-      } else if (map["msg"] == "TS_DECLINE_OFFER") {
+      } else if (map["msg"] == "TS_REJECT_OFFER") {
         final request = _sendingTo.remove(map["data"]["hash"]);
-        onRequestDecline?.call(request);
+        onRequestReject?.call(request);
       }
     }
   }
@@ -335,11 +335,11 @@ class TuxShare {
     }
   }
 
-  Future<void> declineFile(int fileHash, PeerInfo peer) async {
+  Future<void> rejectFile(int fileHash, PeerInfo peer) async {
     _socket?.send(
       utf8.encode(
         jsonEncode({
-          "msg": "TS_DECLINE_OFFER",
+          "msg": "TS_REJECT_OFFER",
           "data": {"hash": fileHash},
         }),
       ),
