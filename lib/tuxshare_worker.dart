@@ -36,6 +36,12 @@ void backendMain(SendPort sendPort) async {
           PeerInfo.fromJson(msg["data"]["peer"]),
           msg["data"]["file"],
         );
+      } else if (msg["type"] == "accept") {
+        tuxshare.acceptFile(
+          msg["data"]["hash"],
+          PeerInfo.fromJson(msg["data"]["peer"]),
+          msg["data"]["destination"],
+        );
       }
     }
   }

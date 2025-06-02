@@ -141,6 +141,8 @@ class TuxShare {
         _requests[_requestCounter] = map["data"];
         onRequest?.call({_requestCounter: map["data"]});
         _requestCounter++;
+      } else if (map["msg"] == "TS_ACCEPT_OFFER") {
+        // TODO
       }
     }
   }
@@ -185,5 +187,24 @@ class TuxShare {
     // } finally {
     //   await socket.close();
     // }
+  }
+
+  /// Send a file to Peer
+  Future<void> acceptFile(int fileHash, PeerInfo peer, String destinationFilePath) async {
+
+    print("cock");
+    _socket?.send(
+      utf8.encode(
+        jsonEncode({
+          "msg": "TS_ACCEPT_OFFER",
+          "data": {
+            "peer": _localHostname,
+            "hash": fileHash
+          },
+        }),
+      ),
+      peer.address,
+      _multicastPort,
+    );
   }
 }

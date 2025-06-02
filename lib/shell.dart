@@ -3,13 +3,14 @@ import "dart:io";
 import "dart:isolate";
 
 import "package:ansix/ansix.dart";
+import "package:dart_console/dart_console.dart";
 import "package:tuxshare/peer_info.dart";
 import "package:tuxshare/tuxshare_worker.dart";
-import "package:dart_console/dart_console.dart";
 
 final Set<PeerInfo> discoveredPeers = {}; // local peer cache
 final Map<int, dynamic> receivedRequests = {}; // local request cache
 final console = Console();
+
 void prompt() => console.write("TuxShare> ".bold().yellow());
 
 String greeting() {
@@ -174,7 +175,9 @@ Future<void> shell() async {
         case "request":
           final requestID = message["data"].keys.first;
           final request = message["data"][requestID];
-          final peer = discoveredPeers.firstWhere((p) => p.hostname == request["peer"]);
+          final peer = discoveredPeers.firstWhere(
+            (p) => p.hostname == request["peer"],
+          );
           final data = message["data"];
           data[requestID]["peer"] = peer;
           receivedRequests.addAll(data);
@@ -226,6 +229,33 @@ Future<void> shell() async {
       });
     },
     "requests": (args) async => console.writeLine(requests()),
+    "accept": (args) async {
+      if (args.isEmpty || args.length > 2) {
+        console.writeErrorLine(
+          'Usage: accept [request id]... <destination path>',
+        );
+        return;
+      }
+
+      final requestID = int.parse(args[0]);
+
+      if (!receivedRequests.containsKey(requestID)) {
+        console.writeErrorLine('Request ID $requestID not found.');
+        return;
+      }
+
+
+
+      workerSendPort.send({
+        "type": "accept",
+        "data": {
+          "hash": receivedRequests[requestID]["hash"],
+          "peer": receivedRequests[requestID]["peer"].toJson(),
+          "destination": args.length == 2 ? args[1] : "",
+        }
+      });
+      receivedRequests.remove(requestID);
+    },
     "exit": (args) async {
       workerSendPort.send({"type": "exit"});
       console.writeLine("Bye!".bold());
