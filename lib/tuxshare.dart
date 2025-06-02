@@ -18,6 +18,18 @@ class TuxShare {
   /// Message that is sent as a response to the discovery message
   final String _responseMessage;
 
+  /// Message that is sent to offer to send a file
+  final String _offerMessage;
+
+  /// Message that is sent when an offer fails
+  final String _offerFailMessage;
+
+  /// Message that is sent when an offer is accepted
+  final String _offerAcceptMessage;
+
+  /// Message that is sent when an offer is rejected
+  final String _offerRejectMessage;
+
   /// Local hostname of the device
   late final String _localHostname;
 
@@ -53,10 +65,18 @@ class TuxShare {
     int multicastPort = 6969,
     String pingMessage = "TS_DISCOVERY_PING",
     String responseMessage = "TS_DISCOVERY_PONG",
+    String offerMessage = "TS_OFFER",
+    String offerFailMessage = "TS_OFFER_FAIL",
+    String offerAcceptMessage = "TS_OFFER_ACCEPT",
+    String offerRejectMessage = "TS_OFFER_REJECT",
   }) : _multicastAddress = multicastAddress ?? InternetAddress("224.0.0.1"),
        _multicastPort = multicastPort,
        _pingMessage = pingMessage,
-       _responseMessage = responseMessage;
+       _responseMessage = responseMessage,
+       _offerMessage = offerMessage,
+       _offerFailMessage = offerFailMessage,
+       _offerAcceptMessage = offerAcceptMessage,
+       _offerRejectMessage = offerRejectMessage;
 
   Set<PeerInfo> get peers => _discoveredPeers;
 
@@ -141,7 +161,7 @@ class TuxShare {
           _discoveredPeers.add(peer); // New peer
           onPeerDiscovered?.call(peer);
         }
-      } else if (map["msg"] == "TS_SEND_OFFER") {
+      } else if (map["msg"] == _offerMessage) {
         try {
           final data = {
             ...map["data"],
@@ -153,17 +173,17 @@ class TuxShare {
           _requestCounter++;
         } on StateError catch (_) {
           final payload = jsonEncode({
-            "msg": "TS_SEND_OFFER_FAIL",
+            "msg": _offerFailMessage,
             "data": map["data"]["hash"],
           });
           _socket!.send(utf8.encode(payload), dg.address, dg.port);
         }
-      } else if (map["msg"] == "TS_SEND_OFFER_FAIL") {
+      } else if (map["msg"] == _offerFailMessage) {
         onSendOfferFail?.call(_sendingTo[map["data"]]);
-      } else if (map["msg"] == "TS_ACCEPT_OFFER") {
+      } else if (map["msg"] == _offerAcceptMessage) {
         final request = _sendingTo.remove(map["data"]["hash"]);
         sendFile(request["peer"], File(request["file"]));
-      } else if (map["msg"] == "TS_REJECT_OFFER") {
+      } else if (map["msg"] == _offerRejectMessage) {
         final request = _sendingTo.remove(map["data"]["hash"]);
         onRequestReject?.call(request);
       }
@@ -188,7 +208,7 @@ class TuxShare {
     _socket?.send(
       utf8.encode(
         jsonEncode({
-          "msg": "TS_SEND_OFFER",
+          "msg": _offerMessage,
           "data": {
             ..._sendingTo[hash],
             ...{"peer": _localHostname},
@@ -299,7 +319,7 @@ class TuxShare {
     _socket?.send(
       utf8.encode(
         jsonEncode({
-          "msg": "TS_ACCEPT_OFFER",
+          "msg": _offerAcceptMessage,
           "data": {"peer": _localHostname, "hash": fileHash},
         }),
       ),
@@ -339,7 +359,7 @@ class TuxShare {
     _socket?.send(
       utf8.encode(
         jsonEncode({
-          "msg": "TS_REJECT_OFFER",
+          "msg": _offerRejectMessage,
           "data": {"hash": fileHash},
         }),
       ),
