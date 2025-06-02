@@ -3,6 +3,7 @@ import "dart:convert";
 import "dart:io";
 
 import "package:tuxshare/peer_info.dart";
+import "package:tuxshare/shell.dart";
 
 /// TuxShare is a class that handles the discovery and data-handling of peers in the network
 class TuxShare {
@@ -54,6 +55,10 @@ class TuxShare {
        _responseMessage = responseMessage;
 
   Set<PeerInfo> get peers => _discoveredPeers;
+
+  PeerInfo getPeerFromHostname(String hostname) {
+    return discoveredPeers.firstWhere((peer) => peer.hostname == hostname);
+  }
 
   /// Starts listening for incoming datagrams
   Future<void> startListening() async {
