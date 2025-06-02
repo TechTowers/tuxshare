@@ -157,7 +157,7 @@ class TuxShare {
   }
 
   /// Send a file to Peer
-  Future<void> sendFile(PeerInfo peer, File file, {int port = 9696}) async {
+  Future<void> sendOffer(PeerInfo peer, File file, {int port = 9696}) async {
     int hash = Object.hash(peer.hostname, file.path);
     _sendingTo[hash] = {
       "peer": peer,

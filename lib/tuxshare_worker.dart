@@ -37,7 +37,7 @@ void backendMain(SendPort sendPort) async {
         tuxshare.close();
         break;
       } else if (msg["type"] == "send") {
-        tuxshare.sendFile(
+        tuxshare.sendOffer(
           PeerInfo.fromJson(msg["data"]["peer"]),
           msg["data"]["file"],
         );
