@@ -11,7 +11,7 @@ final Set<PeerInfo> discoveredPeers = {}; // local peer cache
 final Map<int, dynamic> receivedRequests = {}; // local request cache
 final console = Console();
 
-void prompt() => console.write("TuxShare> ".bold().yellow());
+void prompt() => stdout.write("TuxShare> ".bold().yellow());
 
 String greeting() {
   return (StringBuffer()
@@ -155,7 +155,7 @@ Future<void> shell() async {
   await Isolate.spawn(backendMain, workerReceivePort.sendPort);
   late SendPort workerSendPort;
 
-  console.writeLine(greeting());
+  print(greeting());
 
   workerReceivePort.listen((message) {
     if (message is SendPort) {
@@ -165,19 +165,19 @@ Future<void> shell() async {
         case "peerDiscovered":
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.add(peer);
-          console.writeLine("Discovered peer: $peer".blue());
+          print("Discovered peer: $peer".blue());
           prompt();
         case "peerForget":
           final peer = PeerInfo.fromJson(message['data']);
           discoveredPeers.remove(peer);
-          console.writeLine("Forgot peer: $peer".blue());
+          print("Forgot peer: $peer".blue());
           prompt();
         case "sendOfferFail":
           final request = {
             ...message["data"],
             "peer": PeerInfo.fromJson(message["data"]["peer"]),
           };
-          console.writeErrorLine(
+          print(
             "Sending offer to ${request["peer"]} for ${request["file"]} failed! Try again in a few seconds."
                 .red(),
           );
@@ -191,50 +191,48 @@ Future<void> shell() async {
           final data = message["data"];
           data[requestID]["peer"] = peer;
           receivedRequests.addAll(data);
-          console.writeLine("Received a send request from $peer".blue());
+          print("Received a send request from $peer".blue());
           prompt();
         case "decline":
           final request = message["data"];
           final peer = request["peer"];
-          console.writeLine("Request from $peer was declined.".red());
+          print("Request from $peer was declined.".red());
           prompt();
         case "fileReceived":
           final filePath = message['data'];
-          console.writeLine("File received: $filePath".green());
+          print("File received: $filePath".green());
           prompt();
         case "sendingFileError":
           final peer = PeerInfo.fromJson(message['data']['peer']);
           final error = message['data']['error'];
           final file = message['data']['file'];
-          console.writeErrorLine(
-            "Error sending file $file to $peer: $error".red(),
-          );
+          print("Error sending file $file to $peer: $error".red());
           prompt();
         case "receivingFileError":
           final file = message['data']['file'];
           final error = message['data']['error'];
-          console.writeErrorLine("Error receiving file $file: $error".red());
+          print("Error receiving file $file: $error".red());
           prompt();
       }
     } else {
-      console.writeErrorLine(message);
+      print(message.red());
     }
   });
 
   ProcessSignal.sigint.watch().listen((_) {
     workerSendPort.send({"type": "exit"});
-    console.writeLine("\nReceived SIGINT (Ctrl+C). Bye!".bold());
+    print("\nReceived SIGINT (Ctrl+C). Bye!".bold());
     exit(0);
   });
 
   final commands = <String, Future<void> Function(List<String>)>{
-    "help": (args) async => console.writeLine(help()),
+    "help": (args) async => print(help()),
     "clear": (args) async => console.clearScreen(),
     "discover": (args) async => workerSendPort.send({"type": "discover"}),
-    "list": (args) async => console.writeLine(list(discoveredPeers)),
+    "list": (args) async => print(list(discoveredPeers)),
     "send": (args) async {
       if (args.length < 2) {
-        console.writeErrorLine('Usage: send [device] [file/folder]');
+        print('Usage: send [device] [file/folder]'.red());
         return;
       }
 
@@ -251,32 +249,30 @@ Future<void> shell() async {
 
       final peer = discoveredPeers.firstWhere(
         (p) => p.hostname == target || p.address.address == target,
-        orElse: () => throw ArgumentError('Peer "$target" not found.'),
+        orElse: () => throw ArgumentError('Peer "$target" not found.'.red()),
       );
 
-      console.writeLine('Sending "${file.path}" to $peer...');
+      print('Sending "${file.path}" to $peer...');
       workerSendPort.send({
         "type": "send",
         "data": {"peer": peer.toJson(), "file": file},
       });
     },
-    "requests": (args) async => console.writeLine(requests()),
+    "requests": (args) async => print(requests()),
     "accept": (args) async {
       if (args.isEmpty) {
-        console.writeErrorLine(
-          'Usage: accept [request id]... <destination path>',
-        );
+        print('Usage: accept [request id]... <destination path>'.red());
         return;
       }
 
       final requestID = int.tryParse(args[0]);
       if (requestID == null) {
-        console.writeErrorLine('Invalid request ID: ${args[0]}'.red());
+        print('Invalid request ID: ${args[0]}'.red());
         return;
       }
 
       if (!receivedRequests.containsKey(requestID)) {
-        console.writeErrorLine('Request ID $requestID not found.');
+        print('Request ID $requestID not found.'.red());
         return;
       }
 
@@ -300,14 +296,14 @@ Future<void> shell() async {
     },
     "decline": (args) async {
       if (args.length != 1) {
-        console.writeErrorLine('Usage: decline [request id]');
+        print('Usage: decline [request id]'.red());
         return;
       }
 
       final requestID = int.parse(args[0]);
 
       if (!receivedRequests.containsKey(requestID)) {
-        console.writeErrorLine('Request ID $requestID not found.');
+        print('Request ID $requestID not found.'.red());
         return;
       }
 
@@ -322,7 +318,7 @@ Future<void> shell() async {
     },
     "exit": (args) async {
       workerSendPort.send({"type": "exit"});
-      console.writeLine("Bye!".bold());
+      print("Bye!".bold());
       exit(0); // Immediate shell exit
     },
     "": (args) async {},
@@ -343,10 +339,10 @@ Future<void> shell() async {
       try {
         await handler(args);
       } catch (e) {
-        console.writeErrorLine("Error executing '$command': $e");
+        print("Error executing '$command': $e".red());
       }
     } else {
-      console.writeErrorLine('Unknown command: "$command"');
+      print('Unknown command: "$command"'.red());
     }
 
     prompt();
