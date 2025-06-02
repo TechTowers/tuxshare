@@ -190,17 +190,17 @@ class TuxShare {
   }
 
   /// Send a file to Peer
-  Future<void> acceptFile(int fileHash, PeerInfo peer, String destinationFilePath) async {
-
+  Future<void> acceptFile(
+    int fileHash,
+    PeerInfo peer,
+    String destinationFilePath,
+  ) async {
     print("cock");
     _socket?.send(
       utf8.encode(
         jsonEncode({
           "msg": "TS_ACCEPT_OFFER",
-          "data": {
-            "peer": _localHostname,
-            "hash": fileHash
-          },
+          "data": {"peer": _localHostname, "hash": fileHash},
         }),
       ),
       peer.address,
