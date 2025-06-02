@@ -34,7 +34,7 @@ void backendMain(SendPort sendPort) async {
     sendPort.send({'type': 'request', 'data': request});
   };
 
-  tuxshare.onRequestReject = (request) {
+  tuxshare.onOfferReject = (request) {
     sendPort.send({'type': 'reject', 'data': request});
   };
 

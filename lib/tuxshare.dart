@@ -54,7 +54,7 @@ class TuxShare {
   void Function(PeerInfo peer)? onPeerForget;
   void Function(Map<String, dynamic>)? onSendOfferFail;
   void Function(Map<int, dynamic>)? onRequest;
-  void Function(Map<String, dynamic>)? onRequestReject;
+  void Function(Map<String, dynamic>)? onOfferReject;
   void Function(String)? onFileReceived;
   void Function(PeerInfo, String, Object)? onSendingFileError;
   void Function(String, Object)? onReceivingFileError;
@@ -185,7 +185,7 @@ class TuxShare {
         sendFile(request["peer"], File(request["file"]));
       } else if (map["msg"] == _offerRejectMessage) {
         final request = _sendingTo.remove(map["data"]["hash"]);
-        onRequestReject?.call(request);
+        onOfferReject?.call(request);
       }
     }
   }
