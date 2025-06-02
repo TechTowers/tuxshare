@@ -122,7 +122,7 @@ String requests() {
     rows.add([
       requestID.toString(),
       request["peer"].toString(),
-      request["file"].split("/").last,
+      request["file"].split(RegExp(r'[\\/]')).last,
       request["size"].toString(),
       request["hash"].toString(),
     ]);
