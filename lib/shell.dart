@@ -252,7 +252,7 @@ Future<void> shell() async {
     },
     "requests": (args) async => console.writeLine(requests()),
     "accept": (args) async {
-      if (args.isEmpty || args.length > 2) {
+      if (args.isEmpty) {
         console.writeErrorLine(
           'Usage: accept [request id]... <destination path>',
         );
@@ -260,7 +260,10 @@ Future<void> shell() async {
       }
 
       final requestID = int.parse(args[0]);
-
+      String destination = "";
+      if (args.length > 1) {
+        destination = args.sublist(1).join(" ");
+      }
       if (!receivedRequests.containsKey(requestID)) {
         console.writeErrorLine('Request ID $requestID not found.');
         return;
@@ -271,7 +274,7 @@ Future<void> shell() async {
         "data": {
           "hash": receivedRequests[requestID]["hash"],
           "peer": receivedRequests[requestID]["peer"].toJson(),
-          "destination": args.length == 2 ? args[1] : "",
+          "destination": destination,
         },
       });
       receivedRequests.remove(requestID);
