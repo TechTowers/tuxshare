@@ -254,7 +254,7 @@ Future<void> shell() async {
         orElse: () => throw ArgumentError('Peer "$target" not found.'.red()),
       );
 
-      print('Sending "${file.path}" to $peer...');
+      print('Sending offer with "${file.path}" to $peer...');
       workerSendPort.send({
         "type": "send",
         "data": {"peer": peer.toJson(), "file": file},
@@ -285,15 +285,19 @@ Future<void> shell() async {
         outputPath = null;
       }
 
+      var peer = receivedRequests[requestID]["peer"];
       workerSendPort.send({
         "type": "accept",
         "data": {
           "requestID": requestID,
           "hash": receivedRequests[requestID]["hash"],
-          "peer": receivedRequests[requestID]["peer"].toJson(),
+          "peer": peer.toJson(),
           "outputPath": outputPath,
         },
       });
+      var fileName =
+          File(receivedRequests[requestID]["file"]).uri.pathSegments.last;
+      print('File "$fileName" is now being received from $peer.'.green());
       receivedRequests.remove(requestID);
     },
     "reject": (args) async {
