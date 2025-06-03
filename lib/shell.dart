@@ -4,6 +4,7 @@ import "dart:isolate";
 
 import "package:ansix/ansix.dart";
 import "package:dart_console/dart_console.dart";
+import "package:tuxshare/file_helpers.dart";
 import "package:tuxshare/peer_info.dart";
 import "package:tuxshare/tuxshare_worker.dart";
 
@@ -238,7 +239,7 @@ Future<void> shell() async {
       }
 
       final target = args[0];
-      final file = File(args.sublist(1).join(" "));
+      final file = File(expandHome(args.sublist(1).join(" ")));
       try {
         await file.openRead().first;
       } catch (e) {
