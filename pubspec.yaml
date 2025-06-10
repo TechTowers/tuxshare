@@ -1,6 +1,6 @@
 name: tuxshare
 description: TuxShare is an open-source, cross-platform file sharing app that lets you securely and effortlessly transfer files between devices on the same network—no internet required.
-version: 1.1.0
+version: 1.1.1
 repository: https://github.com/TechTowers/tuxshare
 
 environment:
