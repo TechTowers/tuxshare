@@ -320,7 +320,7 @@ Future<void> shell() async {
       workerSendPort.send({
         "type": "reject",
         "data": {
-          "requestID": receivedRequests[requestID]["requestID"],
+          "requestID": requestID,
           "hash": receivedRequests[requestID]["hash"],
           "peer": receivedRequests[requestID]["peer"].toJson(),
         },
