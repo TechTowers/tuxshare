@@ -1,5 +1,9 @@
 # 🐧 TuxShare
 
+![GitHub Actions Build Status](https://img.shields.io/github/actions/workflow/status/TechTowers/tuxshare/build.yaml?style=for-the-badge)
+![GitHub Actions Checks Status](https://img.shields.io/github/actions/workflow/status/TechTowers/tuxshare/checks.yaml?label=checks&style=for-the-badge)
+![GitHub Release Version](https://img.shields.io/github/v/release/TechTowers/tuxshare?style=for-the-badge)
+![GitHub Downloads](https://img.shields.io/github/downloads/TechTowers/tuxshare/total?style=for-the-badge)
 ![preview](.github/assets/preview.png)
 
 TuxShare is a lightweight peer discovery and file-sharing tool written in Dart.
