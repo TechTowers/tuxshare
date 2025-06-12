@@ -2,7 +2,15 @@ name: Build
 
 on:
   push:
+    paths:
+      - "**.dart"
+      - "**.lock"
+      - ".github/workflows/build.yaml"
   pull_request:
+    paths:
+      - "**.dart"
+      - "**.lock"
+      - ".github/workflows/build.yaml"
 
 permissions:
   contents: write
