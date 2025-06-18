@@ -122,10 +122,10 @@ packages:
     dependency: "direct main"
     description:
       name: dart_console
-      sha256: "30776f697c440fdf5615a5b4fa318fd03c0788a2aeb30625a5972e83592b40c5"
+      sha256: "03c23e1f9cc3ac02b608f834808003e6510a5b292a0449f43dfac1c78bd8ee85"
       url: "https://pub.dev"
     source: hosted
-    version: "4.1.1"
+    version: "4.1.2"
   dart_style:
     dependency: transitive
     description:
